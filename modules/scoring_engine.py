@@ -386,23 +386,40 @@ class ScoringEngine:
                                              ["ml_predictions"])
             return DEFAULT_SCORE
         
-        # Calculate weighted average of ML predictions
+        # Calculate weighted average of ML predictions with improved handling
         total_score = 0.0
         total_weight = 0.0
+        valid_predictions = 0
         
         for prediction_type, score in ml_predictions.items():
             if score is not None and not pd.isna(score):
-                # Normalize score to 0-10 range
-                normalized_score = max(0.0, min(10.0, score * 10.0))
+                # Apply minimum threshold to prevent extremely low scores
+                min_threshold = 0.1  # Minimum 10% score
+                boosted_score = max(score, min_threshold)
+                
+                # Normalize score to 0-10 range with boost for low scores
+                if boosted_score < 0.3:
+                    # Boost very low scores to make them more meaningful
+                    boosted_score = boosted_score * 2.0
+                
+                normalized_score = max(0.0, min(10.0, boosted_score * 10.0))
                 weight = 1.0  # Equal weight for all predictions
                 
                 total_score += normalized_score * weight
                 total_weight += weight
+                valid_predictions += 1
         
         if total_weight == 0:
             return DEFAULT_SCORE
         
-        return total_score / total_weight
+        # Apply additional boost if we have multiple valid predictions
+        base_score = total_score / total_weight
+        
+        # Boost score if we have good prediction coverage
+        if valid_predictions >= 2:
+            base_score = min(10.0, base_score * 1.2)  # 20% boost
+        
+        return max(0.0, min(10.0, base_score))
     
     def _calculate_injury_profile_score(self, injury_profile: Dict[str, Any], 
                                       player_name: str = "unknown", 

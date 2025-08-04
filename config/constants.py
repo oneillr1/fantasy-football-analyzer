@@ -14,18 +14,18 @@ OPTIMAL_POCKET_TIME = 2.7
 # Scoring System Weights (Universal Scoring System)
 SCORING_WEIGHTS = {
     'volume': 0.20,      # 20% weight for volume metrics
-    'efficiency': 0.35,  # 35% weight for efficiency metrics
+    'efficiency': 0.30,  # 30% weight for efficiency metrics (CHANGED from 0.35)
     'explosiveness': 0.25,  # 25% weight for explosiveness metrics
-    'opportunity': 0.15,    # 15% weight for opportunity metrics
+    'opportunity': 0.20,    # 20% weight for opportunity metrics (CHANGED from 0.15)
     'negative': -0.05       # -5% weight for negative metrics
 }
 
 # Profile Score Weights
 PROFILE_WEIGHTS = {
-    'historical': 0.25,   # 25% weight for historical performance
-    'advanced': 0.30,     # 30% weight for advanced metrics
-    'ml_predictions': 0.25,  # 25% weight for ML predictions
-    'injury': 0.20        # 20% weight for injury profile
+    'historical': 0.15,   # 15% weight for historical performance (CHANGED from 0.25)
+    'advanced': 0.35,     # 35% weight for advanced metrics (CHANGED from 0.30)
+    'ml_predictions': 0.30,  # 30% weight for ML predictions (CHANGED from 0.25)
+    'injury': 0.20        # 20% weight for injury profile (CHANGED from 0.20)
 }
 
 # League Scoring Settings (Half PPR)

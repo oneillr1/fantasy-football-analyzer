@@ -119,13 +119,14 @@ class PlayerAnalyzer:
         
         return historical_data
     
-    def get_injury_profile(self, player: str, position: str) -> Dict[str, Any]:
+    def get_injury_profile(self, player: str, position: str, year: int = 2024) -> Dict[str, Any]:
         """
         Get injury profile for a player.
         
         Args:
             player: Player name
             position: Player position
+            year: Year for season length calculation
             
         Returns:
             Dictionary with injury profile data
@@ -158,6 +159,22 @@ class PlayerAnalyzer:
                         injury_row.get('INJURY_RISK', injury_row.get('RISK', 0.5)))
                     games_missed = self.data_loader.safe_float_conversion(
                         injury_row.get('GAMES_MISSED', injury_row.get('MISSED', 0)))
+                    
+                    # Calculate games missed based on season length if not provided
+                    if games_missed == 0:
+                        # Try to get games played from advanced data
+                        games_played = 0
+                        if position in self.data_loader.advanced_data and year in self.data_loader.advanced_data[position]:
+                            df = self.data_loader.advanced_data[position][year]
+                            player_col = 'Player' if 'Player' in df.columns else 'PLAYER'
+                            player_mask = df[player_col].str.contains(player.split()[0], case=False, na=False)
+                            if player_mask.any():
+                                player_row = df[player_mask].iloc[0]
+                                games_played = self.data_loader.safe_float_conversion(player_row.get('G', 0))
+                        
+                        # Season length: 16 games before 2021, 17 games from 2021 onwards
+                        season_length = 17 if year >= 2021 else 16
+                        games_missed = max(0, season_length - games_played)
                     
                     injury_profile.update({
                         'injury_risk': injury_risk,
