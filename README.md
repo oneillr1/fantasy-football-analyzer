@@ -23,10 +23,11 @@ A comprehensive Python-based fantasy football analysis tool that leverages histo
 #### `fantasy_analyzer.py`
 The main analysis engine that:
 - Loads and processes all CSV data files
-- Performs comprehensive player profiling
+- Performs comprehensive player profiling using the Universal Scoring System
 - Generates machine learning predictions
 - Creates detailed analysis reports
 - Identifies draft values and reaches
+- Enforces real data requirements with error logging for missing data
 
 #### `sleeper_extractor.py`
 Tool for extracting data from Sleeper fantasy football platform:
@@ -104,7 +105,17 @@ The analyzer expects the following CSV files in the `fantasy_data/` directory:
 
 ## Configuration
 
-### Scoring Settings
+### Scoring Systems
+The analyzer uses a **Universal Scoring System** that categorizes metrics into:
+- **Volume Metrics** (20% weight): Raw production numbers
+- **Efficiency Metrics** (35% weight): Per-attempt and per-game efficiency
+- **Explosiveness Metrics** (25% weight): Big-play potential and ceiling
+- **Opportunity Metrics** (15% weight): Usage and role indicators
+- **Negative Metrics** (-5% weight): Penalties for turnovers and inefficiency
+
+All metrics are normalized to a 0-10 scale and require real data - no fallback values are used.
+
+### League Scoring Settings
 The analyzer is configured for Half PPR scoring:
 - Passing: 1 point per 25 yards, 6 points per TD, -2 for INTs
 - Rushing: 1 point per 10 yards, 6 points per TD, -2 for fumbles
@@ -118,13 +129,27 @@ The analyzer is configured for Half PPR scoring:
 - Breakout threshold: 20 points
 - Regression threshold: -20 points
 
+### Data Quality Requirements
+- **No Fallback Data**: The system requires real data for all calculations
+- **Error Logging**: Missing data is logged to `data_debug_*.txt` files
+- **Zero Scores**: Players with missing data receive 0.0 scores instead of neutral fallbacks
+
 ## Output Files
 
 The analyzer generates several output files:
 - `player_profiles.txt` - Detailed player analysis
 - `player_profiles.json` - Structured player data
 - `fantasy_analysis_report.txt` - Comprehensive analysis report
-- `data_debug_*.txt` - Debug logs for data processing
+- `data_debug_*.txt` - Debug logs for data processing and missing data errors
+
+## Recent Updates
+
+### Scoring System Standardization (Latest)
+- **Unified Scoring**: Replaced legacy scoring system with Universal Scoring System
+- **Removed Fallbacks**: Eliminated all fallback data and neutral score defaults
+- **Data Quality**: Now requires real data for all calculations
+- **Error Logging**: Missing data is logged for debugging and data quality improvement
+- **Zero Tolerance**: Players with missing data receive 0.0 scores instead of estimated values
 
 ## Contributing
 
