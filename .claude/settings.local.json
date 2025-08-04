@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(python:*)",
+      "Bash(del test_profiles.py)",
+      "Bash(rm:*)",
+      "Bash(dir:*)",
+      "Bash(ls:*)",
+      "Bash(grep:*)",
+      "Bash(del \"C:\\Users\\Ryan\\fantasy\\test_implementation.py\")",
+      "Bash(del debug_*.py test_*.py simple_fantasy_test.py validate_all_fixes.py)",
+      "Bash(find:*)",
+      "Bash(del test_player_matching.py test_clean_name.py)",
+      "Bash(timeout 120 python fantasy_analyzer.py)",
+      "Bash(timeout:*)"
+    ],
+    "deny": []
+  }
+}
