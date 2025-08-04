@@ -1,0 +1,36 @@
+# Cursor Rules for Fantasy Football Analyzer Project
+
+## LEGACY FILE PROTECTION
+- NEVER modify fantasy_analyzer.py - this is a legacy file
+- All new development must use the modular system (fantasy_analyzer_new.py and modules/)
+- If you need to make changes, use the modular system components
+
+## MODULAR SYSTEM USAGE
+- Use fantasy_analyzer_new.py as the main entry point
+- All test scripts should import from fantasy_analyzer_new, not fantasy_analyzer
+- Data loading: modules/data_loader.py
+- Scoring: modules/scoring_engine.py  
+- ML models: modules/ml_models.py
+- Player analysis: modules/player_analysis.py
+- League analysis: modules/league_analysis.py
+- Value analysis: modules/value_analysis.py
+- Reporting: modules/reporting.py
+- Utilities: modules/utils.py
+
+## TESTING
+- All test scripts should use the modular system
+- Update any existing test scripts to import from fantasy_analyzer_new
+- Use test_modular_system.py as the main testing script
+
+## CONSTANTS AND CONFIGURATION
+- Use config/constants.py for all constants and configurations
+- Do not hardcode values in individual modules
+
+## ERROR HANDLING
+- If you encounter issues with the legacy system, fix them in the modular system
+- Never modify fantasy_analyzer.py to fix issues
+- Use the modular system's enhanced error handling and data loading
+
+## GIT PROTECTION
+- The legacy file is already in .gitignore to prevent accidental commits
+- Always verify you're working with the modular system before making changes 

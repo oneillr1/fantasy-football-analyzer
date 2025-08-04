@@ -366,7 +366,10 @@ class ReportGenerator:
             if advanced_metrics:
                 test_results.append(f"   • Key Metrics:")
                 for metric, value in list(advanced_metrics.items())[:5]:  # Show top 5
-                    test_results.append(f"     - {metric}: {value:.2f}")
+                    if isinstance(value, (int, float)):
+                        test_results.append(f"     - {metric}: {value:.2f}")
+                    else:
+                        test_results.append(f"     - {metric}: {value}")
                 
                 adv_score = overall_scores.get('advanced_score', 0)
                 test_results.append(f"     Final: {adv_score:.2f}/10 points")

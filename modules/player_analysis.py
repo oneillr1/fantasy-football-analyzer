@@ -61,43 +61,53 @@ class PlayerAnalyzer:
                 adp_df = self.data_loader.adp_data[year]
                 adp_player_col = self.data_loader.get_player_column(adp_df, f"ADP {year}")
                 adp_col = self.data_loader.get_adp_column(adp_df, f"ADP {year}")
+                pos_col = self.data_loader.get_position_column(adp_df, f"ADP {year}")
                 
-                if adp_player_col and adp_col:
-                    # Find player in ADP data
-                    clean_player = self.data_loader.clean_player_name_for_matching(player)
-                    adp_df_cleaned = adp_df.copy()
-                    adp_df_cleaned['Player_Clean'] = adp_df_cleaned[adp_player_col].apply(
-                        self.data_loader.clean_player_name_for_matching)
-                    player_adp = adp_df_cleaned[adp_df_cleaned['Player_Clean'] == clean_player]
+                if adp_player_col and adp_col and pos_col:
+                    # Filter by position first (ADP data has "WR1", "RB2" format)
+                    adp_df_filtered = adp_df[adp_df[pos_col].notna() & adp_df[pos_col].str.upper().str.startswith(position.upper())]
                     
-                    if not player_adp.empty:
-                        adp_rank = self.data_loader.safe_float_conversion(
-                            player_adp.iloc[0].get(adp_col))
+                    if not adp_df_filtered.empty:
+                        # Find player in filtered ADP data
+                        clean_player = self.data_loader.clean_player_name_for_matching(player)
+                        adp_df_cleaned = adp_df_filtered.copy()
+                        adp_df_cleaned['Player_Clean'] = adp_df_cleaned[adp_player_col].apply(
+                            self.data_loader.clean_player_name_for_matching)
+                        player_adp = adp_df_cleaned[adp_df_cleaned['Player_Clean'] == clean_player]
                         
-                        # Get results data
-                        if year in self.data_loader.results_data:
-                            results_df = self.data_loader.results_data[year]
-                            results_player_col = self.data_loader.get_player_column(results_df, f"Results {year}")
+                        if not player_adp.empty:
+                            adp_rank = self.data_loader.safe_float_conversion(
+                                player_adp.iloc[0].get(adp_col))
                             
-                            if results_player_col:
-                                # Find player in results data
-                                results_df_cleaned = results_df.copy()
-                                results_df_cleaned['Player_Clean'] = results_df_cleaned[results_player_col].apply(
-                                    self.data_loader.clean_player_name_for_matching)
-                                player_results = results_df_cleaned[results_df_cleaned['Player_Clean'] == clean_player]
+                            # Get results data
+                            if year in self.data_loader.results_data:
+                                results_df = self.data_loader.results_data[year]
+                                results_player_col = self.data_loader.get_player_column(results_df, f"Results {year}")
+                                results_pos_col = self.data_loader.get_position_column(results_df, f"Results {year}")
                                 
-                                if not player_results.empty:
-                                    player_result = player_results.iloc[0]
-                                    finish_rank = self.data_loader.safe_float_conversion(
-                                        player_result.get('RK', player_result.get('#', 999)))
-                                    fantasy_pts = self.data_loader.safe_float_conversion(
-                                        player_result.get('FPTS', player_result.get('TTL', player_result.get('PTS', 0))))
+                                if results_player_col and results_pos_col:
+                                    # Filter results by position
+                                    results_df_filtered = results_df[results_df[results_pos_col].str.upper() == position.upper()]
                                     
-                                    if adp_rank > 0 and finish_rank > 0:
-                                        adp_diff = adp_rank - finish_rank  # Positive = outperformed ADP
-                                        adp_differentials.append(adp_diff)
-                                        fantasy_points.append(fantasy_pts)
-                                        finish_ranks.append(finish_rank)
+                                    if not results_df_filtered.empty:
+                                        # Find player in filtered results data
+                                        results_df_cleaned = results_df_filtered.copy()
+                                        results_df_cleaned['Player_Clean'] = results_df_cleaned[results_player_col].apply(
+                                            self.data_loader.clean_player_name_for_matching)
+                                        player_results = results_df_cleaned[results_df_cleaned['Player_Clean'] == clean_player]
+                                        
+                                        if not player_results.empty:
+                                            player_result = player_results.iloc[0]
+                                            finish_rank = self.data_loader.safe_float_conversion(
+                                                player_result.get('RK', player_result.get('#', 999)))
+                                            fantasy_pts = self.data_loader.safe_float_conversion(
+                                                player_result.get('FPTS', player_result.get('TTL', player_result.get('PTS', 0))))
+                                            
+                                            if adp_rank > 0 and finish_rank > 0:
+                                                adp_diff = adp_rank - finish_rank  # Positive = outperformed ADP
+                                                adp_differentials.append(adp_diff)
+                                                fantasy_points.append(fantasy_pts)
+                                                finish_ranks.append(finish_rank)
         
         # Calculate historical metrics
         if adp_differentials:

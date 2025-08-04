@@ -418,7 +418,7 @@ class LeagueAnalyzer:
                 pos_col = self.data_loader.get_position_column(adp_df, f"ADP {year}")
                 
                 if adp_col and pos_col:
-                    pos_data = adp_df[adp_df[pos_col] == position]
+                    pos_data = adp_df[adp_df[pos_col].notna() & adp_df[pos_col].str.upper().str.startswith(position.upper())]
                     for _, row in pos_data.iterrows():
                         adp = self.data_loader.safe_float_conversion(row.get(adp_col))
                         if adp > 0:

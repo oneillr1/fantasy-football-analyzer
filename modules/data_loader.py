@@ -125,14 +125,58 @@ class DataLoader:
                 print(f"  ✗ {file_type} {year}: File not found - {file_path}")
                 return None
             
-            df = pd.read_csv(file_path)
+            # Try different CSV reading strategies
+            df = None
             
-            if df.empty:
-                print(f"  ✗ {file_type} {year}: Empty file - {file_path}")
-                return None
+            # Strategy 1: Standard pandas read_csv
+            try:
+                df = pd.read_csv(file_path)
+                if not df.empty:
+                    print(f"  ✓ {file_type} {year}: Loaded {len(df)} rows - {file_path}")
+                    return df
+            except Exception as e:
+                print(f"  ⚠ {file_type} {year}: Standard parsing failed, trying error handling - {e}")
             
-            print(f"  ✓ {file_type} {year}: Loaded {len(df)} rows - {file_path}")
-            return df
+            # Strategy 2: Error handling with on_bad_lines='skip'
+            try:
+                df = pd.read_csv(file_path, on_bad_lines='skip')
+                if not df.empty:
+                    print(f"  ✓ {file_type} {year}: Loaded {len(df)} rows (some rows skipped) - {file_path}")
+                    return df
+            except Exception as e:
+                print(f"  ⚠ {file_type} {year}: Error handling parsing failed - {e}")
+            
+            # Strategy 3: Manual parsing with error tolerance
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                
+                # Parse header
+                if lines:
+                    header = lines[0].strip().split(',')
+                    data_lines = []
+                    
+                    for i, line in enumerate(lines[1:], 1):
+                        try:
+                            # Try to parse the line
+                            values = line.strip().split(',')
+                            if len(values) >= len(header):
+                                # Take only the expected number of columns
+                                data_lines.append(values[:len(header)])
+                            else:
+                                print(f"    Skipping line {i+1}: insufficient fields")
+                        except Exception:
+                            print(f"    Skipping line {i+1}: parsing error")
+                    
+                    if data_lines:
+                        df = pd.DataFrame(data_lines, columns=header)
+                        print(f"  ✓ {file_type} {year}: Loaded {len(df)} rows (manual parsing) - {file_path}")
+                        return df
+            except Exception as e:
+                print(f"  ⚠ {file_type} {year}: Manual parsing failed - {e}")
+            
+            print(f"  ✗ {file_type} {year}: All parsing strategies failed")
+            return None
             
         except Exception as e:
             print(f"  ✗ {file_type} {year}: Error reading file - {e}")
@@ -256,6 +300,10 @@ class DataLoader:
             return ""
         
         name = str(name).strip()
+        
+        # Remove team abbreviations in parentheses (e.g., "(BAL)", "(PHI)", "(CIN)")
+        import re
+        name = re.sub(r'\s*\([A-Z]{2,4}\)\s*$', '', name)
         
         # Remove common suffixes
         suffixes = [" Jr.", " Sr.", " III", " II", " IV", " V"]

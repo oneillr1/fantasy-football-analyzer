@@ -197,22 +197,15 @@ class MLModels:
                 X_test_scaled = scaler.transform(X_test)
                 
                 # Train model
-                if target_name == 'breakout':
-                    model = RandomForestClassifier(n_estimators=100, random_state=42)
-                else:
-                    model = RandomForestRegressor(n_estimators=100, random_state=42)
+                model = RandomForestRegressor(n_estimators=100, random_state=42)
                 
                 model.fit(X_train_scaled, y_train)
                 
                 # Evaluate model
                 y_pred = model.predict(X_test_scaled)
-                if target_name == 'breakout':
-                    accuracy = accuracy_score(y_test, y_pred.round())
-                    confidence = accuracy
-                else:
-                    mse = mean_squared_error(y_test, y_pred)
-                    r2 = r2_score(y_test, y_pred)
-                    confidence = max(0.0, min(1.0, r2))  # Use R² as confidence
+                mse = mean_squared_error(y_test, y_pred)
+                r2 = r2_score(y_test, y_pred)
+                confidence = max(0.0, min(1.0, r2))  # Use R² as confidence
                 
                 # Store model and metadata
                 self.ml_models[target_name][position] = model

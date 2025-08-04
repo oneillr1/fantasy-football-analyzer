@@ -1,17 +1,17 @@
 """
-Enhanced Scoring System Test Script
-
-This script runs the enhanced scoring test to identify issues with score compression
-and provide detailed breakdowns of all scoring components.
+Test script for the scoring system with detailed breakdowns.
+This script tests the comprehensive metrics and scoring system.
 """
 
 import sys
 import os
+import pandas as pd
+import numpy as np
 
 # Add the current directory to the Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from fantasy_analyzer import FantasyFootballAnalyzer
+from fantasy_analyzer_new import FantasyFootballAnalyzer
 
 def test_enhanced_scoring():
     """Test the enhanced scoring system with detailed breakdowns."""
@@ -28,8 +28,8 @@ def test_enhanced_scoring():
         
         # Test data loading
         print("\n2. Testing data loading...")
-        if analyzer.years:
-            print(f"✓ Data loaded for years: {analyzer.years}")
+        if analyzer.data_loader.years:
+            print(f"✓ Data loaded for years: {analyzer.data_loader.years}")
         else:
             print("⚠ No years found in data")
             return
