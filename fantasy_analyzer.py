@@ -514,106 +514,7 @@ class FantasyFootballAnalyzer:
             'data_quality': 'full' if len(adp_diffs) >= 2 else 'limited' if len(adp_diffs) == 1 else 'none'
         }
     
-    def _calculate_fallback_historical_score(self, player_name: str, position: str, advanced_metrics: Dict) -> Dict[str, float]:
-        """
-        Calculate fallback historical performance when ADP/results data is missing
-        Uses advanced metrics trend analysis and position-relative expectations
-        """
-        fallback_methods_used = []
-        
-        # Method 1: Use advanced metrics to infer likely performance tier
-        if advanced_metrics:
-            # Calculate composite advanced score as proxy for historical performance
-            skip_keys = {'PLAYER', 'Tm', 'POS', 'composite_score', 'player_name'}
-            numeric_values = []
-            
-            current_year = max(self.years)
-            position_data = None
-            if current_year in self.advanced_data and position in self.advanced_data[current_year]:
-                position_data = self.advanced_data[current_year][position]
-            
-            for key, value in advanced_metrics.items():
-                if key.lower() in [k.lower() for k in skip_keys]:
-                    continue
-                    
-                try:
-                    numeric_value = None
-                    if isinstance(value, (int, float)):
-                        numeric_value = float(value)
-                    elif isinstance(value, str):
-                        clean_val = value.replace('%', '').strip()
-                        if clean_val:
-                            numeric_value = float(clean_val)
-                    
-                    if numeric_value is not None and position_data is not None and key in position_data.columns:
-                        position_values = position_data[key].dropna()
-                        if len(position_values) > 5:
-                            percentile = (position_values <= numeric_value).mean() * 100
-                            numeric_values.append(percentile)
-                except (ValueError, TypeError):
-                    continue
-            
-            if numeric_values:
-                avg_percentile = np.mean(numeric_values)
-                fallback_methods_used.append("advanced_metrics_percentile")
-                
-                # ENHANCED AGGRESSIVE historical performance differentiation
-                if avg_percentile >= 90:
-                    # Elite performers: dramatic outperformance
-                    adp_differential_estimate = -15.0  # Beat ADP by ~15 spots
-                    fp_multiplier = 1.6
-                elif avg_percentile >= 80:
-                    # Top tier: significant outperformance
-                    adp_differential_estimate = -10.0  # Beat ADP by ~10 spots
-                    fp_multiplier = 1.4
-                elif avg_percentile >= 65:
-                    # Good performers: moderate outperformance
-                    adp_differential_estimate = -5.0  # Beat ADP by ~5 spots  
-                    fp_multiplier = 1.2
-                elif avg_percentile >= 45:
-                    # Average performers: met expectations
-                    adp_differential_estimate = 0.0   # Met ADP
-                    fp_multiplier = 1.0
-                elif avg_percentile >= 25:
-                    # Below average: moderate underperformance
-                    adp_differential_estimate = 8.0   # Underperformed by ~8 spots
-                    fp_multiplier = 0.75
-                elif avg_percentile >= 10:
-                    # Poor performers: significant underperformance
-                    adp_differential_estimate = 18.0  # Major underperformance
-                    fp_multiplier = 0.5
-                else:
-                    # Bottom tier: dramatic underperformance
-                    adp_differential_estimate = 25.0  # Severe underperformance
-                    fp_multiplier = 0.3
-                
-                # Estimate fantasy points based on position baselines
-                position_fp_baseline = {'QB': 250, 'RB': 180, 'WR': 160, 'TE': 120}
-                estimated_fp = position_fp_baseline.get(position, 150) * fp_multiplier
-                
-                return {
-                    'avg_adp_differential': adp_differential_estimate,
-                    'avg_fantasy_points': estimated_fp,
-                    'years_of_data': 0,  # Flag as estimated
-                    'has_historical_data': False,
-                    'data_quality': 'estimated',
-                    'fallback_methods': fallback_methods_used,
-                    'confidence_level': min(0.7, len(numeric_values) / 10),  # Lower confidence
-                    'is_fallback': True
-                }
-        
-        # Method 2: Position-based neutral expectations (last resort)
-        fallback_methods_used.append("position_neutral")
-        return {
-            'avg_adp_differential': 0.0,     # Neutral performance
-            'avg_fantasy_points': 0.0,       # No estimate
-            'years_of_data': 0,
-            'has_historical_data': False,
-            'data_quality': 'none',
-            'fallback_methods': fallback_methods_used,
-            'confidence_level': 0.1,         # Very low confidence
-            'is_fallback': True
-        }
+
     
     def _calculate_z_score_based_score(self, value: float, position_values: pd.Series, metric_name: str = "") -> tuple[float, float]:
         """
@@ -840,9 +741,13 @@ class FantasyFootballAnalyzer:
         }
     
     def _calculate_historical_score(self, historical_perf: Dict[str, float]) -> float:
-        """Calculate historical performance component score (0-10) with improved position-specific logic"""
-        if historical_perf['years_of_data'] == 0:
-            return 5.0  # Neutral score for rookies/no data
+        """Calculate historical performance component score (0-10) - ONLY REAL DATA"""
+        
+        # REQUIRE real historical data - no fallbacks
+        if not historical_perf or historical_perf.get('years_of_data', 0) == 0:
+            self._log_missing_data("unknown", "unknown", "no_historical_data", 
+                                 [f"historical_perf: {historical_perf}"])
+            return 0.0  # Return 0 if no historical data, no fallback
         
         # Position-specific ADP differential scoring (negative is better - outperforming ADP)
         # Now uses positional rankings instead of overall rankings
@@ -897,29 +802,20 @@ class FantasyFootballAnalyzer:
         return min(10.0, adp_score + peak_bonus + consistency_bonus + experience_bonus)
     
     def _calculate_advanced_metrics_score(self, advanced_metrics: Dict[str, Any], position: str = None, player_row: Any = None) -> float:
-        """Calculate advanced metrics component score using universal system"""
-        if not advanced_metrics and player_row is None:
-            return 5.0  # Neutral score if no advanced metrics
+        """Calculate advanced metrics component score using universal system ONLY - NO FALLBACKS"""
         
-        # Use universal system if player_row is provided
-        if player_row is not None and position is not None:
-            try:
-                universal_score, breakdown = self.calculate_advanced_score_universal(player_row, position)
-                return universal_score
-            except Exception as e:
-                print(f"Error in universal scoring, falling back to legacy: {e}")
+        # REQUIRE player_row and position for universal system
+        if player_row is None or position is None:
+            self._log_missing_data("unknown", position or "unknown", "player_row_or_position_missing", 
+                                 [f"player_row: {player_row is not None}", f"position: {position}"])
+            return 0.0  # Return 0 if missing required data, no fallback
         
-        # Fallback to legacy system
-        if not advanced_metrics:
-            return 5.0
-        
-        composite_score = self._calculate_composite_score(advanced_metrics)
-        
-        # Composite score is already on reasonable scale (typically 0-10)
-        # Just ensure it's within bounds and apply reasonable scaling
-        normalized_score = min(10.0, max(0.0, composite_score))
-        
-        return normalized_score
+        try:
+            universal_score, breakdown = self.calculate_advanced_score_universal(player_row, position)
+            return universal_score
+        except Exception as e:
+            self._log_missing_data("unknown", position, "universal_scoring_error", [str(e)])
+            return 0.0  # Return 0 on error, no fallback
     
     def _calculate_ml_predictions_score(self, ml_predictions: Dict[str, float], 
                                        player_name: str = "unknown", position: str = "unknown") -> float:
@@ -3366,7 +3262,7 @@ class FantasyFootballAnalyzer:
                     },
                     'advanced_metrics_summary': {
                         str(current_year): advanced_metrics,
-                        'efficiency_scores': {'composite_score': self._calculate_composite_score(advanced_metrics)},
+                        'efficiency_scores': {'universal_score': overall_scores['advanced_score']},
                         'key_strengths': list(advanced_metrics.keys())[:3] if advanced_metrics else []
                     },
                     'ml_predictions': {
@@ -3392,58 +3288,7 @@ class FantasyFootballAnalyzer:
         
         return profiles
     
-    def _calculate_composite_score(self, advanced_metrics: Dict[str, Any]) -> float:
-        """Calculate composite efficiency score from advanced metrics (0-10 scale)"""
-        if not advanced_metrics:
-            return 5.0
-        
-        # Skip non-numeric keys that shouldn't be in scoring
-        skip_keys = {'PLAYER', 'Tm', 'POS', 'composite_score', 'player_name'}
-        
-        numeric_values = []
-        for key, value in advanced_metrics.items():
-            if key.lower() in [k.lower() for k in skip_keys]:
-                continue
-                
-            try:
-                # Try to convert to float
-                if isinstance(value, (int, float)):
-                    # Scale very large values (like total targets/receptions)
-                    if value > 50:  # Likely a counting stat
-                        scaled_value = min(10.0, (value / 20) * 5.0)  # Scale counting stats
-                        numeric_values.append(scaled_value)
-                    else:
-                        numeric_values.append(min(10.0, float(value)))
-                elif isinstance(value, str):
-                    # Remove % signs and try to convert
-                    clean_val = value.replace('%', '').strip()
-                    if clean_val:
-                        val = float(clean_val)
-                        # Percentage values should be scaled differently
-                        if '%' in str(value):
-                            scaled_val = (val / 100) * 10  # Convert % to 0-10 scale
-                        else:
-                            scaled_val = min(10.0, val)
-                        numeric_values.append(scaled_val)
-            except (ValueError, TypeError):
-                continue
-        
-        # CRITICAL: Apply same optimization here as in test mode
-        # Weight top 3 metrics higher (60%) and rest lower (40%) to reduce central tendency
-        if numeric_values and len(numeric_values) >= 3:
-            sorted_values = sorted(numeric_values, reverse=True)  # Sort descending
-            top_3 = sorted_values[:3]
-            rest = sorted_values[3:]
-            
-            if rest:  # If there are metrics beyond top 3
-                weighted_score = (np.mean(top_3) * 0.6) + (np.mean(rest) * 0.4)
-            else:  # Only 3 metrics available
-                weighted_score = np.mean(top_3)
-            
-            return min(10.0, max(0.0, weighted_score))
-        elif numeric_values:
-            return min(10.0, max(0.0, np.mean(numeric_values)))
-        return 5.0
+
     
     def save_player_profiles(self, profiles: List[Dict[str, Any]], filename: str = "player_profiles.txt") -> str:
         """Save player profiles in readable text format"""
@@ -3736,23 +3581,21 @@ class FantasyFootballAnalyzer:
             test_results.append(f"TEST PLAYER #{i}: {player_name} ({position})")
             test_results.append(f"{'='*60}")
             
-            # Get advanced metrics first (needed for fallback historical scoring)
+            # Get advanced metrics for universal scoring
             key_metrics = self.key_metrics.get(position, [])
             advanced_metrics = {}
             for metric in key_metrics:
                 if metric in player_row.index and not pd.isna(player_row[metric]):
                     advanced_metrics[metric] = player_row[metric]
             
-            # Get historical performance with fallback system
+            # Get historical performance - REQUIRE real data
             historical_perf = self._calculate_historical_performance(player_name, position)
             
-            # Apply fallback if no historical data available
+            # REQUIRE real historical data - no fallbacks
             if not historical_perf.get('has_historical_data', False):
-                fallback_perf = self._calculate_fallback_historical_score(player_name, position, advanced_metrics)
-                # Merge fallback data
-                for key, value in fallback_perf.items():
-                    if key not in historical_perf or historical_perf[key] == 0:
-                        historical_perf[key] = value
+                self._log_missing_data(player_name, position, "no_historical_data_for_test", 
+                                     [f"years_of_data: {historical_perf.get('years_of_data', 0)}"])
+                continue  # Skip this player if no real data
             
             # Get injury profile
             injury_profile = self._get_injury_profile(player_name, position)
@@ -3774,30 +3617,9 @@ class FantasyFootballAnalyzer:
             test_results.append("\nDETAILED SCORING BREAKDOWN:")
             test_results.append("-" * 40)
             
-            # 1. Historical Performance Score with Dynamic Weighting
-            is_fallback = historical_perf.get('is_fallback', False)
-            data_quality = historical_perf.get('data_quality', 'none')
-            
-            # Dynamic weight adjustment based on data quality
-            historical_base_weight = 0.25
-            if data_quality == 'none':
-                historical_weight = 0.10  # Reduce from 25% to 10%
-                weight_redistributed = 0.15  # Redistribute 15% to other components
-            elif data_quality == 'estimated':
-                historical_weight = 0.15  # Reduce from 25% to 15%
-                weight_redistributed = 0.10  # Redistribute 10% to other components
-            elif data_quality == 'limited':
-                historical_weight = 0.20  # Reduce from 25% to 20%
-                weight_redistributed = 0.05  # Redistribute 5% to other components
-            else:
-                historical_weight = 0.25  # Full weight for good data
-                weight_redistributed = 0.0
-            
-            test_results.append(f"\n1. HISTORICAL PERFORMANCE (Dynamic Weight: {historical_weight*100:.0f}%):")
-            test_results.append(f"   • Data Quality: {data_quality.upper()}")
-            if is_fallback:
-                test_results.append(f"   • Fallback Methods: {', '.join(historical_perf.get('fallback_methods', []))}")
-                test_results.append(f"   • Confidence Level: {historical_perf.get('confidence_level', 0.0):.2f}")
+            # 1. Historical Performance Score - REAL DATA ONLY
+            test_results.append(f"\n1. HISTORICAL PERFORMANCE (Weight: 25%):")
+            test_results.append(f"   • Data Quality: REAL DATA")
             
             # Show historical scoring structure
             test_results.append("   • Historical Score Structure:")
@@ -3807,7 +3629,7 @@ class FantasyFootballAnalyzer:
             test_results.append("     - Total Historical Score: /10 points")
             
             hist_score = 0.0
-            if historical_perf['years_of_data'] > 0 or is_fallback:
+            if historical_perf['years_of_data'] > 0:
                 # ADP differential component with detailed breakdown
                 adp_diff = historical_perf['avg_adp_differential']
                 test_results.append("   • ADP Differential Assessment:")
@@ -3862,9 +3684,9 @@ class FantasyFootballAnalyzer:
                 test_results.append(f"     Step 1: {adp_component*0.5:.2f} + {fp_component*0.3:.2f} + {years_component*0.2:.2f}")
                 test_results.append(f"     Final: {hist_score:.2f}/10 points")
             else:
-                hist_score = 5.0  # Default for no historical data
+                hist_score = 0.0  # No score for missing data
                 test_results.append(f"   • No historical data available")
-                test_results.append(f"   • Using default neutral score: {hist_score:.2f}/10")
+                test_results.append(f"   • Score: {hist_score:.2f}/10 (no fallback)")
             
             # 2. Advanced Metrics Score (30% weight)
             test_results.append("\n2. ADVANCED METRICS (30% weight):")
