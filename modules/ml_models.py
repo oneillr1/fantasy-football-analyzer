@@ -85,7 +85,7 @@ class MLModels:
                 
                 print(f"    Processing {year}: {len(features_df)} players in advanced data")
                 for _, row in features_df.iterrows():
-                    player = row['PLAYER']
+                    player = row['Player']
                     
                     # Skip if player name is not valid
                     if not isinstance(player, str) or pd.isna(player) or len(player.strip()) == 0:

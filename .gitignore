@@ -123,6 +123,9 @@ player_profiles.json
 fantasy_analysis_report.txt
 data_debug_*.txt
 
+# Legacy files - DO NOT MODIFY
+fantasy_analyzer.py
+
 # Data files (optional - uncomment if you don't want to track data)
 # fantasy_data/*.csv
 

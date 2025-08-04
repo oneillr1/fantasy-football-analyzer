@@ -6,9 +6,10 @@ Handles all report generation and file output.
 
 from typing import Dict, List, Optional, Any
 import json
+import pandas as pd
 from datetime import datetime
 
-from config.constants import POSITIONS, DEFAULT_SCORE
+from config.constants import POSITIONS, DEFAULT_SCORE, KEY_METRICS
 
 
 class ReportGenerator:
@@ -302,7 +303,7 @@ class ReportGenerator:
             test_results.append(f"{'='*60}")
             
             # Get advanced metrics
-            key_metrics = self.data_loader.key_metrics.get(position, [])
+            key_metrics = KEY_METRICS.get(position, [])
             advanced_metrics = {}
             for metric in key_metrics:
                 if metric in player_row.index and not pd.isna(player_row[metric]):

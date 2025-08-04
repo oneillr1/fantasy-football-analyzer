@@ -50,17 +50,136 @@ LEAGUE_SCORING = {
     }
 }
 
-# Key Advanced Metrics by Position
+# Comprehensive Advanced Metrics by Position
 KEY_METRICS = {
-    'QB': ['PCT', 'Y/A', 'AIR/A', '10+ YDS', '20+ YDS', 'PKT TIME', 'RTG', 'SACK'],
-    'RB': ['Y/ATT', 'YACON/ATT', 'BRKTKL', '10+ YDS', '20+ YDS', 'REC', 'TGT', 'RZ TGT'],
-    'WR': ['Y/R', 'YAC/R', 'YACON/R', 'BRKTKL', '% TM', 'CATCHABLE', '10+ YDS', '20+ YDS', 'RZ TGT'],
-    'TE': ['Y/R', 'YAC/R', 'YACON/R', 'BRKTKL', '% TM', 'CATCHABLE', '10+ YDS', '20+ YDS', 'RZ TGT']
+    'QB': [
+        # Efficiency metrics
+        'PCT', 'Y/A', 'RTG', 'AIR/A',
+        # Volume metrics  
+        'COMP', 'ATT', 'YDS', 'AIR',
+        # Explosive play metrics
+        '10+ YDS', '20+ YDS', '30+ YDS', '40+ YDS', '50+ YDS',
+        # Pressure metrics
+        'PKT TIME', 'SACK', 'KNCK', 'HRRY', 'BLITZ',
+        # Accuracy metrics
+        'POOR', 'DROP',
+        # Opportunity metrics
+        'RZ ATT'
+    ],
+    'RB': [
+        # Efficiency metrics
+        'Y/ATT', 'YBCON/ATT', 'YACON/ATT',
+        # Volume metrics
+        'ATT', 'YDS', 'REC', 'TGT',
+        # Explosive play metrics
+        '10+ YDS', '20+ YDS', '30+ YDS', '40+ YDS', '50+ YDS', 'LNG TD', 'LNG',
+        # Power/elusiveness metrics
+        'BRKTKL', 'TK LOSS', 'TK LOSS YDS',
+        # Opportunity metrics
+        'RZ TGT'
+    ],
+    'WR': [
+        # Efficiency metrics
+        'Y/R', 'YBC/R', 'YAC/R', 'YACON/R', 'AIR/R',
+        # Volume metrics
+        'REC', 'YDS', 'TGT',
+        # Explosive play metrics
+        '10+ YDS', '20+ YDS', '30+ YDS', '40+ YDS', '50+ YDS', 'LNG',
+        # Opportunity metrics
+        '% TM', 'CATCHABLE', 'RZ TGT',
+        # Playmaking metrics
+        'BRKTKL', 'DROP'
+    ],
+    'TE': [
+        # Efficiency metrics
+        'Y/R', 'YBC/R', 'YAC/R', 'YACON/R', 'AIR/R',
+        # Volume metrics
+        'REC', 'YDS', 'TGT',
+        # Explosive play metrics
+        '10+ YDS', '20+ YDS', '30+ YDS', '40+ YDS', '50+ YDS', 'LNG',
+        # Opportunity metrics
+        '% TM', 'CATCHABLE', 'RZ TGT',
+        # Playmaking metrics
+        'BRKTKL', 'DROP'
+    ]
+}
+
+# Comprehensive Metric Descriptions
+METRIC_DESCRIPTIONS = {
+    # QB Metrics
+    'COMP': 'Completions - Total passes completed',
+    'ATT': 'Attempts - Total passes thrown',
+    'PCT': 'Completion Percentage - QB accuracy',
+    'YDS': 'Passing Yards - Total passing production',
+    'Y/A': 'Yards per Attempt - QB efficiency',
+    'AIR': 'Air Yards - Downfield passing volume',
+    'AIR/A': 'Air Yards per Attempt - QB downfield aggression',
+    'RTG': 'Passer Rating - Overall QB efficiency',
+    'PKT TIME': 'Pocket Time - QB processing speed/protection',
+    'SACK': 'Sacks Taken - QB pressure handling',
+    'KNCK': 'Knockdowns - Times hit while throwing',
+    'HRRY': 'Hurries - Times pressured',
+    'BLITZ': 'Times Blitzed - Pressure frequency',
+    'POOR': 'Poor Passes - Inaccurate throws',
+    'DROP': 'Drops by Receivers - WR/TE drops',
+    'RZ ATT': 'Red Zone Attempts - TD opportunity',
+    '10+ YDS': '10+ Yard Passes - Explosive plays',
+    '20+ YDS': '20+ Yard Passes - Big plays',
+    '30+ YDS': '30+ Yard Passes - Deep plays',
+    '40+ YDS': '40+ Yard Passes - Very deep plays',
+    '50+ YDS': '50+ Yard Passes - Extremely deep plays',
+    
+    # RB Metrics
+    'ATT': 'Attempts - Rushing volume',
+    'YDS': 'Yards - Total rushing production',
+    'Y/ATT': 'Yards per Attempt - RB efficiency',
+    'YBCON': 'Yards Before Contact - O-line quality/vision',
+    'YACON': 'Yards After Contact - Power/elusiveness after hit',
+    'YBCON/ATT': 'Yards Before Contact per Attempt - Blocking efficiency',
+    'YACON/ATT': 'Yards After Contact per Attempt - RB power/elusiveness',
+    'BRKTKL': 'Broken Tackles - Elusiveness and power',
+    'TK LOSS': 'Tackled for Loss - Negative plays',
+    'TK LOSS YDS': 'Tackled for Loss Yards - Negative yardage',
+    'LNG TD': 'Longest Touchdown - Big play ability',
+    'LNG': 'Longest Run - Best single play',
+    '10+ YDS': '10+ Yard Runs - Explosive plays',
+    '20+ YDS': '20+ Yard Runs - Big plays',
+    '30+ YDS': '30+ Yard Runs - Deep plays',
+    '40+ YDS': '40+ Yard Runs - Very deep plays',
+    '50+ YDS': '50+ Yard Runs - Extremely deep plays',
+    'REC': 'Receptions - Receiving volume',
+    'TGT': 'Targets - Receiving opportunity',
+    'RZ TGT': 'Red Zone Targets - TD opportunity',
+    
+    # WR/TE Metrics
+    'REC': 'Receptions - Total catches',
+    'YDS': 'Receiving Yards - Total receiving production',
+    'Y/R': 'Yards per Reception - Big play ability',
+    'YBC': 'Yards Before Catch - Route running/separation',
+    'YBC/R': 'Yards Before Catch per Reception - Route efficiency',
+    'AIR': 'Air Yards - Downfield target depth',
+    'AIR/R': 'Air Yards per Reception - Downfield efficiency',
+    'YAC': 'Yards After Catch - Playmaking ability',
+    'YAC/R': 'Yards After Catch per Reception - Playmaking efficiency',
+    'YACON': 'Yards After Contact - Power after catch',
+    'YACON/R': 'Yards After Contact per Reception - Power efficiency',
+    'BRKTKL': 'Broken Tackles - Elusiveness after catch',
+    'TGT': 'Targets - Receiving opportunity',
+    '% TM': 'Team Target Share - Volume opportunity',
+    'CATCHABLE': 'Catchable Targets - QB accuracy to player',
+    'DROP': 'Drops - Missed catchable passes',
+    'RZ TGT': 'Red Zone Targets - TD opportunity',
+    '10+ YDS': '10+ Yard Receptions - Explosive plays',
+    '20+ YDS': '20+ Yard Receptions - Big plays',
+    '30+ YDS': '30+ Yard Receptions - Deep plays',
+    '40+ YDS': '40+ Yard Receptions - Very deep plays',
+    '50+ YDS': '50+ Yard Receptions - Extremely deep plays',
+    'LNG': 'Longest Reception - Best single play'
 }
 
 # Metric Categories for Universal Scoring
 METRIC_CATEGORIES = {
-    'volume': ['YDS', 'ATT', 'REC', 'TGT', 'TD', 'CMP', 'ATT'],
+    'volume': ['YDS', 'ATT', 'REC', 'TGT', 'TD', 'COMP', 'ATT'],
     'efficiency': ['Y/A', 'Y/R', 'PCT', 'RTG', 'YAC/R', 'YACON/R', 'YACON/ATT'],
     'explosiveness': ['10+ YDS', '20+ YDS', '40+ YDS', 'BRKTKL', 'AIR/A'],
     'opportunity': ['TGT', 'RZ TGT', '% TM', 'CATCHABLE', 'PKT TIME'],
