@@ -121,7 +121,7 @@ class PlayerAnalyzer:
     
     def get_injury_profile(self, player: str, position: str, year: int = 2024) -> Dict[str, Any]:
         """
-        Get injury profile for a player.
+        Get injury profile for a player with improved parsing and age factor.
         
         Args:
             player: Player name
@@ -135,54 +135,120 @@ class PlayerAnalyzer:
             'injury_risk': 0.5,  # Default moderate risk
             'games_missed': 0,
             'injury_history': [],
-            'has_injury_data': False
+            'has_injury_data': False,
+            'age': None
         }
         
-        # Check if injury data exists for this position
-        if position in self.data_loader.injury_data:
-            injury_df = self.data_loader.injury_data[position]
-            player_col = self.data_loader.get_player_column(injury_df, f"Injury {position}")
+        # Get player age
+        age = self.ml_models._get_player_age(player, position)
+        injury_profile['age'] = age
+        
+        # Get injury data
+        if position in self.ml_models.injury_data:
+            df = self.ml_models.injury_data[position]
             
-            if player_col:
-                # Find player in injury data
-                clean_player = self.data_loader.clean_player_name_for_matching(player)
-                injury_df_cleaned = injury_df.copy()
-                injury_df_cleaned['Player_Clean'] = injury_df_cleaned[player_col].apply(
-                    self.data_loader.clean_player_name_for_matching)
-                player_injury = injury_df_cleaned[injury_df_cleaned['Player_Clean'] == clean_player]
+            # Try to find player in injury data
+            player_found = False
+            for _, row in df.iterrows():
+                player_name_col = None
+                for col in df.columns:
+                    if 'player' in col.lower() or 'name' in col.lower():
+                        player_name_col = col
+                        break
                 
-                if not player_injury.empty:
-                    injury_row = player_injury.iloc[0]
+                if player_name_col is None:
+                    continue
+                
+                injury_player = str(row[player_name_col]).strip()
+                if player in injury_player or injury_player in player:
+                    player_found = True
                     
-                    # Extract injury metrics
-                    injury_risk = self.data_loader.safe_float_conversion(
-                        injury_row.get('INJURY_RISK', injury_row.get('RISK', 0.5)))
-                    games_missed = self.data_loader.safe_float_conversion(
-                        injury_row.get('GAMES_MISSED', injury_row.get('MISSED', 0)))
+                    # Extract injury risk - handle different column formats
+                    injury_risk = 0.5  # Default
+                    games_missed = 0.0
                     
-                    # Calculate games missed based on season length if not provided
-                    if games_missed == 0:
-                        # Try to get games played from advanced data
-                        games_played = 0
-                        if position in self.data_loader.advanced_data and year in self.data_loader.advanced_data[position]:
-                            df = self.data_loader.advanced_data[position][year]
-                            player_col = 'Player' if 'Player' in df.columns else 'PLAYER'
-                            player_mask = df[player_col].str.contains(player.split()[0], case=False, na=False)
-                            if player_mask.any():
-                                player_row = df[player_mask].iloc[0]
-                                games_played = self.data_loader.safe_float_conversion(player_row.get('G', 0))
-                        
-                        # Season length: 16 games before 2021, 17 games from 2021 onwards
-                        season_length = 17 if year >= 2021 else 16
-                        games_missed = max(0, season_length - games_played)
+                    # Try to find injury risk column
+                    for col in df.columns:
+                        if 'risk' in col.lower() and 'injury' in col.lower():
+                            risk_value = row[col]
+                            if isinstance(risk_value, str):
+                                if 'high' in risk_value.lower():
+                                    injury_risk = 0.8
+                                elif 'very high' in risk_value.lower():
+                                    injury_risk = 0.9
+                                elif 'medium' in risk_value.lower():
+                                    injury_risk = 0.5
+                                elif 'low' in risk_value.lower():
+                                    injury_risk = 0.3
+                                elif 'very low' in risk_value.lower():
+                                    injury_risk = 0.2
+                            break
+                    
+                    # Try to find games missed column
+                    for col in df.columns:
+                        if 'missed' in col.lower() or 'games' in col.lower():
+                            try:
+                                games_missed = float(row[col])
+                            except (ValueError, TypeError):
+                                games_missed = 0.0
+                            break
+                    
+                    # Try to find injury risk percentage
+                    for col in df.columns:
+                        if 'risk' in col.lower() and '%' in str(row[col]):
+                            try:
+                                risk_pct = str(row[col]).replace('%', '').strip()
+                                injury_risk = float(risk_pct) / 100.0
+                            except (ValueError, TypeError):
+                                pass
+                            break
                     
                     injury_profile.update({
                         'injury_risk': injury_risk,
                         'games_missed': games_missed,
-                        'has_injury_data': True
+                        'has_injury_data': True,
+                        'injury_history': []  # Could be enhanced with actual history
                     })
+                    break
+            
+            if not player_found:
+                # Calculate games missed from advanced data
+                season_length = self.ml_models._get_games_played(player, position, year)
+                games_played = 0.0
+                
+                if position in self.ml_models.data_loader.advanced_data and year in self.ml_models.data_loader.advanced_data[position]:
+                    df = self.ml_models.data_loader.advanced_data[position][year]
+                    player_col = self.ml_models.data_loader.get_player_column(df, f"Advanced {position}")
+                    
+                    for _, row in df.iterrows():
+                        if player in str(row.get(player_col, '')):
+                            games_played = self.ml_models.data_loader.safe_float_conversion(row.get('G', 0))
+                            break
+                
+                games_missed = max(0, season_length - games_played)
+                injury_profile['games_missed'] = games_missed
         
         return injury_profile
+
+    def _convert_injury_risk_text_to_numeric(self, risk_text: str) -> float:
+        """Convert injury risk text to numeric value."""
+        if not risk_text or pd.isna(risk_text):
+            return 0.5
+        
+        risk_text = str(risk_text).strip().lower()
+        
+        if 'very low' in risk_text:
+            return 0.1
+        elif 'low' in risk_text:
+            return 0.3
+        elif 'medium' in risk_text:
+            return 0.5
+        elif 'high' in risk_text:
+            return 0.7
+        elif 'very high' in risk_text:
+            return 0.9
+        else:
+            return 0.5  # Default to medium risk
     
     def perform_basic_trend_analysis(self, player_name: str, position: str) -> Dict[str, Any]:
         """

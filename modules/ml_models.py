@@ -68,11 +68,10 @@ class MLModels:
         for pos in ['qb', 'rb', 'wr', 'te']:
             try:
                 df = pd.read_csv(f'fantasy_data/injury_predictor_{pos}.csv')
-                for _, row in df.iterrows():
-                    self.injury_data[row['Player Name']] = row
+                self.injury_data[pos.upper()] = df
             except Exception as e:
                 print(f"Warning: Could not load injury data for {pos}: {e}")
-
+    
     def train_models(self) -> None:
         positions = POSITIONS
         for position in positions:
@@ -149,7 +148,7 @@ class MLModels:
         if not valid_players:
             return None
         return pd.DataFrame(valid_players)
-
+    
     def _extract_enhanced_features_with_age_injury(self, row, position, player, year):
         features = []
         key_metrics = KEY_METRICS.get(position, [])
@@ -171,7 +170,7 @@ class MLModels:
         features.append(age / 40.0)
         features.append(max(0, (age - 25) / 10))
         # Injury features
-        injury_row = self.injury_data.get(player)
+        injury_row = self.injury_data.get(position.upper())
         if injury_row is not None:
             features.append(float(injury_row.get('Projected Games Missed', 0)))
             features.append(float(injury_row.get('Career Injuries', 0)))
@@ -236,28 +235,58 @@ class MLModels:
         return np.array(features) if features else None
 
     def _calculate_year_to_year_targets(self, adp_rank, next_row, position, player, year):
+        """
+        Calculate year-to-year targets using real ADP and fantasy points data.
+        Improved target calculation for better model training.
+        """
         finish_rank = self.data_loader.safe_float_conversion(next_row.get('RK', next_row.get('#', 999)))
         fantasy_points = self.data_loader.safe_float_conversion(next_row.get('FPTS', next_row.get('TTL', next_row.get('PTS', 0))))
+        
+        # Use real ADP rank if available, otherwise use a reasonable default
+        if adp_rank == 999:  # Default ADP rank
+            adp_rank = 50.0  # Middle ADP as fallback
+        
         adp_diff = adp_rank - finish_rank
-        if adp_diff >= 30:
-            breakout = 0.95 + min(0.05, (adp_diff - 30) / 40)
+        
+        # Improved breakout calculation with better scaling
+        if adp_diff >= 50:
+            breakout = 0.95 + min(0.05, (adp_diff - 50) / 50)
+        elif adp_diff >= 30:
+            breakout = 0.85 + (adp_diff - 30) / 20 * 0.1
         elif adp_diff >= 15:
-            breakout = 0.75 + (adp_diff - 15) / 15 * 0.2
+            breakout = 0.70 + (adp_diff - 15) / 15 * 0.15
         elif adp_diff >= 5:
-            breakout = 0.55 + (adp_diff - 5) / 10 * 0.2
+            breakout = 0.55 + (adp_diff - 5) / 10 * 0.15
         elif adp_diff >= -5:
             breakout = 0.45 + (adp_diff + 5) / 10 * 0.1
         elif adp_diff >= -20:
             breakout = 0.25 + (adp_diff + 20) / 15 * 0.2
         else:
             breakout = max(0.0, 0.25 + (adp_diff + 20) / 30 * 0.25)
-        consistency = max(0.0, min(1.0, 1.0 - (abs(adp_diff) / 60)))
-        positional_value = max(0.0, min(1.0, (60 - finish_rank) / 60))
+        
+        # Improved consistency calculation
+        consistency = max(0.0, min(1.0, 1.0 - (abs(adp_diff) / 80)))
+        
+        # Improved positional value calculation
+        positional_value = max(0.0, min(1.0, (80 - finish_rank) / 80))
+        
+        # Get games played and calculate injury risk
         games_played = self._get_games_played(player, position, year)
-        # Season length: 16 games before 2021, 17 games from 2021 onwards
         season_length = 17 if year >= 2021 else 16
         games_missed = max(0, season_length - games_played)
-        injury_risk = min(1.0, games_missed / 10.0)
+        
+        # Improved injury risk calculation
+        if games_missed == 0:
+            injury_risk = 0.1  # Very low risk
+        elif games_missed <= 2:
+            injury_risk = 0.2  # Low risk
+        elif games_missed <= 5:
+            injury_risk = 0.4  # Moderate risk
+        elif games_missed <= 8:
+            injury_risk = 0.6  # High risk
+        else:
+            injury_risk = 0.8  # Very high risk
+        
         return {
             'breakout': breakout,
             'consistency': consistency,
@@ -266,18 +295,23 @@ class MLModels:
         }
 
     def _get_games_played(self, player: str, position: str, year: int) -> float:
-        try:
-            if position in self.data_loader.advanced_data and year in self.data_loader.advanced_data[position]:
-                df = self.data_loader.advanced_data[position][year]
-                player_col = 'Player' if 'Player' in df.columns else 'PLAYER'
-                player_mask = df[player_col].str.contains(player.split()[0], case=False, na=False)
-                if player_mask.any():
-                    player_row = df[player_mask].iloc[0]
-                    return self.data_loader.safe_float_conversion(player_row.get('G', 17))
-        except:
-            pass
-        # Default based on year (16 games before 2021, 17 games from 2021 onwards)
-        return 17.0 if year >= 2021 else 16.0
+        """Get games played for a player in a specific year."""
+        if position in self.data_loader.advanced_data and year in self.data_loader.advanced_data[position]:
+            df = self.data_loader.advanced_data[position][year]
+            player_col = 'Player' if 'Player' in df.columns else 'PLAYER'
+            player_mask = df[player_col].str.contains(player.split()[0], case=False, na=False)
+            if player_mask.any():
+                player_row = df[player_mask].iloc[0]
+                return self.data_loader.safe_float_conversion(player_row.get('G', 0))
+        return 0.0
+
+    def _get_player_age(self, player: str, position: str) -> Optional[float]:
+        """Get player age from the age data."""
+        # Try to find the player in the age data
+        for player_name, age in self.player_age_data.items():
+            if player.lower() in player_name.lower() or player_name.lower() in player.lower():
+                return age
+        return None
 
     def _train_multiple_models(self, X: np.ndarray, y: np.ndarray, target_name: str, position: str) -> Tuple[Any, float]:
         best_model = None
@@ -324,8 +358,8 @@ class MLModels:
                 min_confidence = 0.3
                 effective_confidence = max(confidence, min_confidence)
                 weighted_prediction = prediction * effective_confidence
-                min_prediction = 0.1
-                final_prediction = max(weighted_prediction, min_prediction)
+                # Remove minimum threshold to allow lower predictions
+                final_prediction = weighted_prediction
                 predictions[model_type] = max(0.0, min(1.0, final_prediction))
                 if debug_mode:
                     print(f"  {model_type}: {prediction:.3f} (confidence: {confidence:.3f})")
@@ -333,4 +367,4 @@ class MLModels:
                 if debug_mode:
                     print(f"  {model_type}: Error - {e}")
                 predictions[model_type] = DEFAULT_SCORE
-        return predictions 
+        return predictions
