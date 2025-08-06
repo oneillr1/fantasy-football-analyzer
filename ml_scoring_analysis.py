@@ -53,7 +53,7 @@ class MLScoringAnalyzer:
             for player in players:
                 try:
                     historical_perf = self.analyzer.player_analyzer.calculate_historical_performance(player, position)
-                    historical_score = self.analyzer.scoring_engine._calculate_historical_score(historical_perf)
+                    historical_score = self.analyzer.scoring_engine._calculate_enhanced_historical_score(historical_perf, position)
                     
                     historical_scores.append({
                         'player': player,

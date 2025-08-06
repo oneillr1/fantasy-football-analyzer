@@ -33,27 +33,34 @@ class PlayerAnalyzer:
     
     def calculate_historical_performance(self, player: str, position: str) -> Dict[str, float]:
         """
-        Calculate historical performance metrics for a player.
+        Calculate enhanced historical performance metrics for a player.
         
         Args:
             player: Player name
             position: Player position
             
         Returns:
-            Dictionary with historical performance metrics
+            Dictionary with enhanced historical performance metrics
         """
         historical_data = {
             'years_of_data': 0,
             'adp_differential': 0,
             'peak_season': 0,
-            'consistency': 0,
+            'peak_ppg': 0,  # NEW: Peak points per game
+            'avg_ppg': 0,   # NEW: Average points per game
+            'ppg_consistency': 0,
+            'injury_adjustment': 0,
+            'games_played_data': [],
+            'ppg_data': [],
+            'adp_differentials': [],
             'has_historical_data': False
         }
         
-        # Collect data across all years
+        # Collect enhanced data across all years
         adp_differentials = []
         fantasy_points = []
         finish_ranks = []
+        peak_ppg = 0  # Track peak PPG across all years
         
         for year in self.data_loader.years:
             # Get ADP data
@@ -103,19 +110,79 @@ class PlayerAnalyzer:
                                             fantasy_pts = self.data_loader.safe_float_conversion(
                                                 player_result.get('FPTS', player_result.get('TTL', player_result.get('PTS', 0))))
                                             
+                                            # NEW: Collect weekly points for PPG calculation
+                                            weekly_points = []
+                                            for week in range(1, 19):  # Weeks 1-18
+                                                week_points = self.data_loader.safe_float_conversion(
+                                                    player_result.get(str(week), 0))
+                                                if week_points > 0:  # Only count played weeks
+                                                    weekly_points.append(week_points)
+                                            
                                             if adp_rank > 0 and finish_rank > 0:
                                                 adp_diff = adp_rank - finish_rank  # Positive = outperformed ADP
                                                 adp_differentials.append(adp_diff)
                                                 fantasy_points.append(fantasy_pts)
                                                 finish_ranks.append(finish_rank)
+                                                
+                                                # NEW: Store enhanced data and track peak PPG
+                                                if weekly_points:
+                                                    games_played = len(weekly_points)
+                                                    ppg = np.mean(weekly_points)
+                                                    
+                                                    # Track peak PPG across all years
+                                                    if ppg > peak_ppg:
+                                                        peak_ppg = ppg
+                                                    
+                                                    historical_data['games_played_data'].append(games_played)
+                                                    historical_data['ppg_data'].append(ppg)
         
-        # Calculate historical metrics
+        # Calculate enhanced historical metrics
         if adp_differentials:
             historical_data['years_of_data'] = len(adp_differentials)
             historical_data['adp_differential'] = np.mean(adp_differentials)
             historical_data['peak_season'] = max(fantasy_points) if fantasy_points else 0
-            historical_data['consistency'] = 100 - np.std(adp_differentials) if len(adp_differentials) > 1 else 0
+            historical_data['peak_ppg'] = peak_ppg  # NEW: Store peak PPG
+            historical_data['avg_ppg'] = np.mean(historical_data['ppg_data']) if historical_data['ppg_data'] else 0  # NEW: Store average PPG
+            historical_data['adp_differentials'] = adp_differentials
+            
+            # Calculate PPG consistency using mean-to-std ratio - REQUIRE sufficient data
+            if len(historical_data['ppg_data']) >= 2:
+                ppg_std = np.std(historical_data['ppg_data'])
+                ppg_mean = np.mean(historical_data['ppg_data'])
+                epsilon = 0.1  # Small constant to avoid division by zero
+                
+                # Use mean-to-std ratio: mean_ppg / (std_ppg + ε)
+                # This rewards consistent positive performance, penalizes consistent negative performance
+                if ppg_mean > 0:
+                    consistency_ratio = ppg_mean / (ppg_std + epsilon)
+                    # Normalize to 0-100 scale (typical good ratio is 2-5, excellent is 5+)
+                    historical_data['ppg_consistency'] = max(0, min(100, consistency_ratio * 10))
+                else:
+                    # If mean PPG is 0 or negative, consistency is 0
+                    historical_data['ppg_consistency'] = 0
+            else:
+                # Log missing PPG consistency data
+                self.data_loader._log_missing_data(player, position, "ppg_consistency", 
+                                                 ["ppg_data"], f"insufficient_data: {len(historical_data['ppg_data'])} years")
+                historical_data['ppg_consistency'] = None
+            
+            # Calculate injury adjustment - REQUIRE games played data
+            if historical_data['games_played_data']:
+                avg_games_played = np.mean(historical_data['games_played_data'])
+                expected_games = 17  # 2021+ seasons
+                durability_ratio = avg_games_played / expected_games
+                historical_data['injury_adjustment'] = max(0, min(10, durability_ratio * 10))
+            else:
+                # Log missing injury adjustment data
+                self.data_loader._log_missing_data(player, position, "injury_adjustment", 
+                                                 ["games_played_data"], "no_games_played_data")
+                historical_data['injury_adjustment'] = None
+            
             historical_data['has_historical_data'] = True
+        else:
+            # Log missing historical data entirely
+            self.data_loader._log_missing_data(player, position, "historical_data", 
+                                             ["adp_differentials"], "no_adp_data_found")
         
         return historical_data
     

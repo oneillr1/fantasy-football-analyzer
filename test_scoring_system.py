@@ -20,12 +20,16 @@ def test_specific_players():
     print("Testing specific players for weight change comparison")
     print("="*50)
     
-    # Define specific players to test (one from each position)
+    # Define specific players to test (8 players total - 2 from each position)
     specific_players = [
-        ("Lamar Jackson (BAL)", "QB"),
-        ("Saquon Barkley (PHI)", "RB"), 
-        ("Ja'Marr Chase (CIN)", "WR"),
-        ("George Kittle (SF)", "TE")
+        ("Patrick Mahomes (KC)", "QB"),
+        ("Josh Allen (BUF)", "QB"),
+        ("Christian McCaffrey (SF)", "RB"),
+        ("Breece Hall (NYJ)", "RB"),
+        ("Tyreek Hill (MIA)", "WR"),
+        ("CeeDee Lamb (DAL)", "WR"),
+        ("Travis Kelce (KC)", "TE"),
+        ("Sam LaPorta (DET)", "TE")
     ]
     
     try:
@@ -107,7 +111,7 @@ def test_specific_players():
             injury_profile = analyzer.player_analyzer.get_injury_profile(player_name, position)
             
             # Get ML predictions
-            features = analyzer.player_analyzer.ml_models._extract_features(player_row, position)
+            features = analyzer.player_analyzer.ml_models._extract_enhanced_features_with_age_injury(player_row, position, player_name, current_year)
             ml_predictions = {}
             if features is not None:
                 ml_predictions = analyzer.player_analyzer.ml_models.generate_predictions(player_name, position, features)

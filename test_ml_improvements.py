@@ -70,7 +70,7 @@ def test_improved_ml_scoring():
                 
                 # Get other component scores
                 historical_perf = analyzer.player_analyzer.calculate_historical_performance(player, position)
-                historical_score = analyzer.scoring_engine._calculate_historical_score(historical_perf)
+                historical_score = analyzer.scoring_engine._calculate_enhanced_historical_score(historical_perf, position)
                 
                 injury_profile = analyzer.player_analyzer.get_injury_profile(player, position)
                 injury_score = analyzer.scoring_engine._calculate_injury_profile_score(injury_profile, player, position)

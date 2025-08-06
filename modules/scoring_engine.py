@@ -528,7 +528,7 @@ class ScoringEngine:
             Dictionary with component scores and final score
         """
         # Calculate individual component scores
-        historical_score = self._calculate_historical_score(historical_perf)
+        historical_score = self._calculate_enhanced_historical_score(historical_perf, position)
         advanced_score = self._calculate_advanced_metrics_score(advanced_metrics, position, player_row)
         ml_score = self._calculate_ml_predictions_score(ml_predictions, player_name, position)
         injury_score = self._calculate_injury_profile_score(injury_profile, player_name, position)
@@ -562,9 +562,131 @@ class ScoringEngine:
         
         return scores
     
+    def _calculate_position_specific_peak_score(self, peak_ppg: float, position: str) -> float:
+        """
+        Calculate position-specific peak score based on peak PPG with proper scaling.
+        USED FOR ML MODELS ONLY - to help predict breakouts.
+        
+        Args:
+            peak_ppg: Peak points per game
+            position: Player position
+            
+        Returns:
+            Position-specific peak score (0-10)
+        """
+        # Position-specific max PPG thresholds (based on elite performance)
+        position_max_ppg = {
+            'QB': 30.0,  # Elite QBs can average 30+ PPG
+            'RB': 25.0,  # Elite RBs can average 25+ PPG
+            'WR': 22.0,  # Elite WRs can average 22+ PPG
+            'TE': 15.0,  # Elite TEs can average 15+ PPG
+        }
+        
+        max_ppg = position_max_ppg.get(position, 20.0)  # Default to 20
+        
+        # Calculate peak score using the formula: min(10, (peak_ppg / position_max_ppg) * 10)
+        peak_score = min(10.0, (peak_ppg / max_ppg) * 10.0)
+        
+        return max(0.0, peak_score)
+
+    def _calculate_position_specific_avg_ppg_score(self, avg_ppg: float, position: str) -> float:
+        """
+        Calculate position-specific average PPG score for historical scoring.
+        
+        Args:
+            avg_ppg: Average points per game
+            position: Player position
+            
+        Returns:
+            Position-specific average PPG score (0-10)
+        """
+        # Position-specific average PPG thresholds (based on good performance)
+        position_avg_ppg = {
+            'QB': 20.0,  # Good QBs average 20+ PPG
+            'RB': 15.0,  # Good RBs average 15+ PPG
+            'WR': 12.0,  # Good WRs average 12+ PPG
+            'TE': 8.0,   # Good TEs average 8+ PPG
+        }
+        
+        avg_threshold = position_avg_ppg.get(position, 12.0)  # Default to 12
+        
+        # Calculate average PPG score using the formula: min(10, (avg_ppg / position_avg_ppg) * 10)
+        avg_score = min(10.0, (avg_ppg / avg_threshold) * 10.0)
+        
+        return max(0.0, avg_score)
+
+    def _calculate_enhanced_historical_score(self, historical_perf: Dict[str, float], position: str = None) -> float:
+        """
+        Calculate enhanced historical performance component score (0-10) with position-specific scaling.
+        
+        Args:
+            historical_perf: Enhanced historical performance data
+            position: Player position for position-specific scaling
+            
+        Returns:
+            Enhanced historical score (0-10)
+        """
+        # REQUIRE real historical data - no fallbacks
+        if not historical_perf or historical_perf.get('years_of_data', 0) == 0:
+            self.data_loader._log_missing_data("unknown", "unknown", "no_historical_data", 
+                                             [f"historical_perf: {historical_perf}"])
+            return DEFAULT_SCORE  # Return 0 if no historical data, no fallback
+        
+        # Enhanced component extraction - REQUIRE all data, no defaults
+        adp_differential = historical_perf.get('adp_differential')
+        avg_ppg = historical_perf.get('avg_ppg')  # NEW: Use average PPG instead of peak
+        ppg_consistency = historical_perf.get('ppg_consistency')
+        injury_adjustment = historical_perf.get('injury_adjustment')
+        experience = historical_perf.get('years_of_data')
+        
+        # Validate all required data is present
+        if adp_differential is None:
+            self.data_loader._log_missing_data("unknown", "unknown", "adp_differential", 
+                                             ["adp_differential"], "historical_perf")
+            return DEFAULT_SCORE
+        
+        if avg_ppg is None:
+            self.data_loader._log_missing_data("unknown", "unknown", "avg_ppg", 
+                                             ["avg_ppg"], "historical_perf")
+            return DEFAULT_SCORE
+        
+        if ppg_consistency is None:
+            self.data_loader._log_missing_data("unknown", "unknown", "ppg_consistency", 
+                                             ["ppg_consistency"], "historical_perf")
+            return DEFAULT_SCORE
+        
+        if injury_adjustment is None:
+            self.data_loader._log_missing_data("unknown", "unknown", "injury_adjustment", 
+                                             ["injury_adjustment"], "historical_perf")
+            return DEFAULT_SCORE
+        
+        if experience is None:
+            self.data_loader._log_missing_data("unknown", "unknown", "years_of_data", 
+                                             ["years_of_data"], "historical_perf")
+            return DEFAULT_SCORE
+        
+        # Calculate enhanced component scores
+        adp_score = max(0, min(10, (25 + adp_differential) / 5))  # -25 to +25 range -> 0-10
+        avg_ppg_score = self._calculate_position_specific_avg_ppg_score(avg_ppg, position)  # NEW: Position-specific average PPG scaling
+        ppg_consistency_score = max(0, min(10, ppg_consistency / 10))  # 0-100 range -> 0-10
+        injury_score = injury_adjustment  # Already 0-10 scale
+        experience_score = max(0, min(10, experience / 3))  # 0-3+ years -> 0-10
+        
+        # Enhanced weighted average - REMOVED peak score, added average PPG score
+        historical_score = (
+            adp_score * 0.30 +           # Same weight
+            avg_ppg_score * 0.35 +       # NEW: Average PPG score (replaced peak score)
+            ppg_consistency_score * 0.20 + # Same weight
+            injury_score * 0.05 +        # Same weight
+            experience_score * 0.10      # Same weight
+        )
+        
+        return max(0.0, min(10.0, historical_score))
+
     def _calculate_historical_score(self, historical_perf: Dict[str, float]) -> float:
         """
         Calculate historical performance component score (0-10) - ONLY REAL DATA.
+        DEPRECATED: Use _calculate_enhanced_historical_score instead.
         
         Args:
             historical_perf: Historical performance data
@@ -632,6 +754,7 @@ class ScoringEngine:
                                       position: str = "unknown") -> float:
         """
         Calculate ML predictions component score (0-10) with improved normalization.
+        REDUCED breakout weight in favor of PPG-focused metrics.
         
         Args:
             ml_predictions: ML model predictions
@@ -646,10 +769,18 @@ class ScoringEngine:
                                              ["ml_predictions"])
             return DEFAULT_SCORE
         
-        # Calculate weighted average of ML predictions with improved normalization
+        # Calculate weighted average of ML predictions with REDUCED breakout weight
         total_score = 0.0
         total_weight = 0.0
         valid_predictions = 0
+        
+        # NEW: Adjusted weights - reduce breakout, increase PPG-focused metrics
+        prediction_weights = {
+            'breakout': 0.15,      # REDUCED from equal weight (was ~0.25)
+            'consistency': 0.35,   # INCREASED - more PPG-focused
+            'positional_value': 0.35,  # INCREASED - more PPG-focused
+            'injury_risk': 0.15    # Same weight
+        }
         
         for prediction_type, score in ml_predictions.items():
             if score is not None and not pd.isna(score):
@@ -659,8 +790,8 @@ class ScoringEngine:
                 improved_score = (score ** 0.5) * 15 - 1
                 improved_score = max(0.0, min(10.0, improved_score))
                 
-                # Apply confidence-based weighting
-                weight = 1.0  # Equal weight for all predictions
+                # Apply confidence-based weighting with new weights
+                weight = prediction_weights.get(prediction_type, 0.25)  # Default weight
                 
                 total_score += improved_score * weight
                 total_weight += weight

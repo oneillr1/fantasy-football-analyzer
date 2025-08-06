@@ -155,6 +155,7 @@ class MLModels:
         for metric in key_metrics:
             value = self.data_loader.safe_float_conversion(row[metric]) if metric in row.index and not pd.isna(row[metric]) else 0.0
             features.append(value)
+        
         # Games played and missed (accounting for season length)
         games_played = self.data_loader.safe_float_conversion(row.get('G', 0))
         features.append(games_played)
@@ -164,11 +165,38 @@ class MLModels:
         features.append(games_missed)
         durability_ratio = games_played / season_length if games_played > 0 else 0.0
         features.append(durability_ratio)
+        
+        # NEW: Enhanced PPG-related features
+        total_fantasy_points = self.data_loader.safe_float_conversion(row.get('FPTS', row.get('TTL', row.get('PTS', 0))))
+        ppg = total_fantasy_points / games_played if games_played > 0 else 0.0
+        features.append(ppg)  # Points per game
+        features.append(ppg / 25.0)  # Normalized PPG (assuming 25 PPG is elite)
+        
+        # NEW: Weekly consistency features (if weekly data available)
+        weekly_points = []
+        for week in range(1, 19):  # Weeks 1-18
+            week_points = self.data_loader.safe_float_conversion(row.get(str(week), 0))
+            if week_points > 0:  # Only count played weeks
+                weekly_points.append(week_points)
+        
+        if weekly_points:
+            ppg_std = np.std(weekly_points)
+            ppg_mean = np.mean(weekly_points)
+            ppg_cv = ppg_std / ppg_mean if ppg_mean > 0 else 1.0
+            ppg_consistency = max(0, min(1, 1 - ppg_cv))
+            features.append(ppg_consistency)  # PPG consistency (0-1)
+            features.append(ppg_std)  # PPG standard deviation
+            features.append(max(weekly_points))  # Best single game
+            features.append(min(weekly_points))  # Worst single game
+        else:
+            features.extend([0.0, 0.0, 0.0, 0.0])  # Default values if no weekly data
+        
         # Age features
         age = self.player_age_data.get(player, 25.0)
         features.append(age)
         features.append(age / 40.0)
         features.append(max(0, (age - 25) / 10))
+        
         # Injury features
         injury_row = self.injury_data.get(position.upper())
         if injury_row is not None:
@@ -177,6 +205,7 @@ class MLModels:
             features.append(float(injury_row.get('Injuries Per Season', 0)))
         else:
             features.extend([0, 0, 0])
+        
         # Position-specific engineered features (as before)
         if position == 'QB':
             att = self.data_loader.safe_float_conversion(row.get('ATT', 0)) or 1
