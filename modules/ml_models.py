@@ -23,9 +23,11 @@ warnings.filterwarnings('ignore')
 class MLModels:
     """
     Enhanced ML models manager focused on year-to-year prediction (2024→2025) and age/injury integration.
+    Now integrates with the scoring engine's improved injury system.
     """
-    def __init__(self, data_loader):
+    def __init__(self, data_loader, scoring_engine=None):
         self.data_loader = data_loader
+        self.scoring_engine = scoring_engine  # NEW: Reference to scoring engine
         self.ml_models = {'breakout': {}, 'consistency': {}, 'positional_value': {}, 'injury_risk': {}}
         self.scalers = {}
         self.model_confidence = {}
@@ -72,6 +74,10 @@ class MLModels:
             except Exception as e:
                 print(f"Warning: Could not load injury data for {pos}: {e}")
     
+    def set_scoring_engine(self, scoring_engine):
+        """Set the scoring engine reference for injury calculations."""
+        self.scoring_engine = scoring_engine
+
     def train_models(self) -> None:
         positions = POSITIONS
         for position in positions:
@@ -162,7 +168,6 @@ class MLModels:
         # Season length: 16 games before 2021, 17 games from 2021 onwards
         season_length = 17 if year >= 2021 else 16
         games_missed = max(0, season_length - games_played)
-        features.append(games_missed)
         durability_ratio = games_played / season_length if games_played > 0 else 0.0
         features.append(durability_ratio)
         
@@ -197,14 +202,62 @@ class MLModels:
         features.append(age / 40.0)
         features.append(max(0, (age - 25) / 10))
         
-        # Injury features
-        injury_row = self.injury_data.get(position.upper())
-        if injury_row is not None:
-            features.append(float(injury_row.get('Projected Games Missed', 0)))
-            features.append(float(injury_row.get('Career Injuries', 0)))
-            features.append(float(injury_row.get('Injuries Per Season', 0)))
+        # NEW: Use scoring engine's improved injury system if available
+        if self.scoring_engine is not None:
+            # Get injury profile using scoring engine's system
+            injury_profile = self._get_injury_profile_for_ml(player, position)
+            
+            # Check if we have real injury data
+            has_real_injury_data = injury_profile.get('has_injury_data', False)
+            
+            if has_real_injury_data:
+                # Extract scoring engine's injury metrics
+                projected_games_missed = injury_profile.get('projected_games_missed', 0)
+                injury_risk_text = injury_profile.get('injury_risk', 'Medium Risk')
+                injuries_per_season = injury_profile.get('injuries_per_season', 0)
+                injury_risk_per_game = injury_profile.get('injury_risk_per_game', 0)
+                durability = injury_profile.get('durability', 5)
+                
+                # Add scoring engine's injury features
+                features.append(projected_games_missed)
+                features.append(injuries_per_season)
+                features.append(injury_risk_per_game)
+                features.append(durability)
+                
+                # Add scoring engine's calculated injury score (0-10 scale)
+                injury_score = self.scoring_engine._calculate_injury_profile_score(
+                    injury_profile, player, position
+                )
+                features.append(injury_score)
+                
+            else:
+                # Use legacy injury calculation - add same number of features
+                injury_score = self._calculate_legacy_injury_score_for_ml(games_missed, age)
+                features.extend([0.0, 0.0, 0.0, 0.0])  # Placeholder values for missing injury data
+                features.append(injury_score)
+                
         else:
-            features.extend([0, 0, 0])
+            # Fallback to basic injury features if scoring engine not available
+            injury_row = self.injury_data.get(position.upper())
+            if injury_row is not None:
+                features.append(float(injury_row.get('Projected Games Missed', 0)))
+                features.append(float(injury_row.get('Career Injuries', 0)))
+                features.append(float(injury_row.get('Injuries Per Season', 0)))
+            else:
+                features.extend([0, 0, 0])
+            
+            # Basic injury score calculation
+            if games_missed == 0:
+                injury_score = 0.1  # Very low risk
+            elif games_missed <= 2:
+                injury_score = 0.2  # Low risk
+            elif games_missed <= 5:
+                injury_score = 0.4  # Moderate risk
+            elif games_missed <= 8:
+                injury_score = 0.6  # High risk
+            else:
+                injury_score = 0.8  # Very high risk
+            features.append(injury_score)
         
         # Position-specific engineered features (as before)
         if position == 'QB':
@@ -397,3 +450,93 @@ class MLModels:
                     print(f"  {model_type}: Error - {e}")
                 predictions[model_type] = DEFAULT_SCORE
         return predictions
+
+    def _get_injury_profile_for_ml(self, player: str, position: str) -> Dict[str, Any]:
+        """
+        Get injury profile for ML models using the scoring engine's system.
+        
+        Args:
+            player: Player name
+            position: Player position
+            
+        Returns:
+            Dictionary with injury profile data
+        """
+        injury_profile = {
+            'projected_games_missed': 0,
+            'injury_risk': 'Medium Risk',
+            'injuries_per_season': 0,
+            'injury_risk_per_game': 0,
+            'durability': 5,
+            'has_injury_data': False
+        }
+        
+        # Get injury data from scoring engine's data source
+        if position in self.injury_data:
+            df = self.injury_data[position]
+            
+            # Try to find player in injury data
+            for _, row in df.iterrows():
+                player_name_col = None
+                for col in df.columns:
+                    if 'player' in col.lower() or 'name' in col.lower():
+                        player_name_col = col
+                        break
+                
+                if player_name_col is None:
+                    continue
+                
+                injury_player = str(row[player_name_col]).strip()
+                if player in injury_player or injury_player in player:
+                    # Extract injury metrics using scoring engine's parsing
+                    for col in df.columns:
+                        if 'projected' in col.lower() and 'missed' in col.lower():
+                            try:
+                                injury_profile['projected_games_missed'] = float(row[col])
+                            except (ValueError, TypeError):
+                                pass
+                        elif 'injuries' in col.lower() and 'season' in col.lower():
+                            try:
+                                value = str(row[col])
+                                if '/yr' in value:
+                                    value = value.replace('/yr', '')
+                                injury_profile['injuries_per_season'] = float(value)
+                            except (ValueError, TypeError):
+                                pass
+                        elif 'risk' in col.lower() and 'game' in col.lower():
+                            try:
+                                value = str(row[col])
+                                if '%' in value:
+                                    value = value.replace('%', '')
+                                injury_profile['injury_risk_per_game'] = float(value)
+                            except (ValueError, TypeError):
+                                pass
+                        elif 'durability' in col.lower():
+                            try:
+                                injury_profile['durability'] = float(row[col])
+                            except (ValueError, TypeError):
+                                pass
+                        elif 'risk' in col.lower() and 'injury' in col.lower():
+                            risk_value = row[col]
+                            if isinstance(risk_value, str):
+                                injury_profile['injury_risk'] = risk_value
+                    injury_profile['has_injury_data'] = True
+                    break
+        
+        return injury_profile
+
+    def _calculate_legacy_injury_score_for_ml(self, games_missed: float, age: float) -> float:
+        """
+        Calculate a legacy injury risk score based on games missed and age.
+        This is a simplified version of the scoring engine's injury system.
+        """
+        if games_missed == 0:
+            return 0.1  # Very low risk
+        elif games_missed <= 2:
+            return 0.2  # Low risk
+        elif games_missed <= 5:
+            return 0.4  # Moderate risk
+        elif games_missed <= 8:
+            return 0.6  # High risk
+        else:
+            return 0.8  # Very high risk

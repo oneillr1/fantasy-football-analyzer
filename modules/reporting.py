@@ -322,7 +322,7 @@ class ReportGenerator:
             injury_profile = self.player_analyzer.get_injury_profile(player_name, position)
             
             # Get ML predictions
-            features = self.player_analyzer.ml_models._extract_features(player_row, position)
+            features = self.player_analyzer.ml_models._extract_enhanced_features_with_age_injury(player_row, position, player_name, 2024)
             ml_predictions = {}
             if features is not None:
                 ml_predictions = self.player_analyzer.ml_models.generate_predictions(player_name, position, features)

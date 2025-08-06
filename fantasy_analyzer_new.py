@@ -40,7 +40,7 @@ class FantasyFootballAnalyzer:
         # Initialize core components
         self.data_loader = DataLoader(data_directory)
         self.scoring_engine = ScoringEngine(self.data_loader)
-        self.ml_models = MLModels(self.data_loader)
+        self.ml_models = MLModels(self.data_loader, self.scoring_engine)  # NEW: Pass scoring engine
         
         # Initialize analysis components
         self.player_analyzer = PlayerAnalyzer(self.data_loader, self.scoring_engine, self.ml_models)

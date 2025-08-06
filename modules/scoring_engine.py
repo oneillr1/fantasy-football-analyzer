@@ -815,6 +815,8 @@ class ScoringEngine:
         """
         Calculate injury profile score using percentile-based normalization.
         
+        NEW: Fallback to old system if no injury data is available.
+        
         Component 1: 2025 Season Risk (50% weight)
         - Projected Games Missed (30% of total) - Percentile-based normalized
         - Risk Score (20% of total) - Direct mapping with improved spacing
@@ -831,7 +833,14 @@ class ScoringEngine:
                                              ["injury_profile"])
             return DEFAULT_SCORE
         
-        # Extract metrics
+        # NEW: Check if we have real injury data or if this is a fallback
+        has_real_injury_data = injury_profile.get('has_injury_data', False)
+        
+        # If no real injury data, use the old system based on games played
+        if not has_real_injury_data:
+            return self._calculate_legacy_injury_score(injury_profile, player_name, position)
+        
+        # Extract metrics for new system
         projected_games_missed = self._safe_float(injury_profile.get('projected_games_missed', 0))
         injury_risk_text = str(injury_profile.get('injury_risk', 'Medium Risk'))
         injuries_per_season = self._safe_float(injury_profile.get('injuries_per_season', 0))
@@ -898,6 +907,60 @@ class ScoringEngine:
         print(f"  Durability: {durability_score:.2f}")
         
         return max(0.0, min(10.0, final_score))
+    
+    def _calculate_legacy_injury_score(self, injury_profile: Dict[str, Any], 
+                                     player_name: str, position: str) -> float:
+        """
+        Calculate injury score using the old system based on games played.
+        Used as fallback when no injury data is available.
+        
+        Args:
+            injury_profile: Injury profile data
+            player_name: Player name for logging
+            position: Player position
+            
+        Returns:
+            Legacy injury score (0-10)
+        """
+        # Get games missed from the profile
+        games_missed = injury_profile.get('games_missed', 0)
+        
+        # Calculate injury risk based on games missed (old system)
+        if games_missed == 0:
+            injury_score = 8.0  # Very low risk
+        elif games_missed <= 2:
+            injury_score = 6.0  # Low risk
+        elif games_missed <= 5:
+            injury_score = 4.0  # Moderate risk
+        elif games_missed <= 8:
+            injury_score = 2.0  # High risk
+        else:
+            injury_score = 0.5  # Very high risk
+        
+        # Apply age factor if available
+        age = injury_profile.get('age')
+        if age is not None:
+            age_factor = self._calculate_extreme_age_factor(age)
+            # Blend age factor with games missed (70% games, 30% age)
+            injury_score = (injury_score * 0.7) + (age_factor * 0.3)
+        
+        # Determine risk level for debugging
+        if injury_score >= 7.0:
+            risk_level = "VERY LOW"
+        elif injury_score >= 5.0:
+            risk_level = "LOW"
+        elif injury_score >= 3.0:
+            risk_level = "MEDIUM"
+        elif injury_score >= 1.0:
+            risk_level = "HIGH"
+        else:
+            risk_level = "VERY HIGH"
+        
+        # DEBUG OUTPUT for legacy system
+        print(f"DEBUG - {player_name} Legacy Injury Score: {injury_score:.2f}/10, Risk Level: {risk_level}")
+        print(f"  Games Missed: {games_missed}, Age: {age}")
+        
+        return max(0.0, min(10.0, injury_score))
     
     def _safe_float(self, value, default=0.0):
         """Safely convert value to float, handling special cases."""

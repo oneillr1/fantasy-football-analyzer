@@ -30,6 +30,10 @@ class PlayerAnalyzer:
         self.data_loader = data_loader
         self.scoring_engine = scoring_engine
         self.ml_models = ml_models
+        
+        # Ensure ML models have access to scoring engine for injury calculations
+        if hasattr(self.ml_models, 'set_scoring_engine'):
+            self.ml_models.set_scoring_engine(self.scoring_engine)
     
     def calculate_historical_performance(self, player: str, position: str) -> Dict[str, float]:
         """
@@ -507,11 +511,10 @@ class PlayerAnalyzer:
         profile['advanced_metrics'] = advanced_metrics
         
         # Get ML predictions
-        if player_row is not None:
-            features = self.ml_models._extract_features(player_row, position)
-            if features is not None:
-                ml_predictions = self.ml_models.generate_predictions(player_name, position, features)
-                profile['ml_predictions'] = ml_predictions
+        features = self.ml_models._extract_enhanced_features_with_age_injury(player_row, position, player_name, current_year)
+        if features is not None:
+            ml_predictions = self.ml_models.generate_predictions(player_name, position, features)
+            profile['ml_predictions'] = ml_predictions
         
         # Get injury profile
         injury_profile = self.get_injury_profile(player_name, position)
