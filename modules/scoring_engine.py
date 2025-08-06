@@ -813,109 +813,304 @@ class ScoringEngine:
                                       player_name: str = "unknown", 
                                       position: str = "unknown") -> float:
         """
-        Calculate injury profile component score (0-10) with extreme risk differentiation.
+        Calculate injury profile score using percentile-based normalization.
         
-        Args:
-            injury_profile: Injury profile data
-            player_name: Player name for logging
-            position: Player position for logging
-            
-        Returns:
-            Injury profile score (0-10)
+        Component 1: 2025 Season Risk (50% weight)
+        - Projected Games Missed (30% of total) - Percentile-based normalized
+        - Risk Score (20% of total) - Direct mapping with improved spacing
+        
+        Component 2: Historical Pattern Context (30% weight)  
+        - Injuries Per Season (20% of total) - Percentile-based normalized
+        - Per Game Risk (10% of total) - Percentile-based normalized
+        
+        Component 3: Current Physical State (20% weight)
+        - Durability Score (20% of total) - Percentile-based normalized
         """
         if not injury_profile:
             self.data_loader._log_missing_data(player_name, position, "no_injury_profile", 
                                              ["injury_profile"])
             return DEFAULT_SCORE
         
-        # Extract injury risk factors
-        injury_risk = injury_profile.get('injury_risk', 0.5)
-        games_missed = injury_profile.get('games_missed', 0)
-        injury_history = injury_profile.get('injury_history', [])
-        has_injury_data = injury_profile.get('has_injury_data', False)
-        age = injury_profile.get('age', None)
+        # Extract metrics
+        projected_games_missed = self._safe_float(injury_profile.get('projected_games_missed', 0))
+        injury_risk_text = str(injury_profile.get('injury_risk', 'Medium Risk'))
+        injuries_per_season = self._safe_float(injury_profile.get('injuries_per_season', 0))
+        injury_risk_per_game = self._safe_float(injury_profile.get('injury_risk_per_game', 0))
+        durability = self._safe_float(injury_profile.get('durability', 5))
         
-        # Calculate base risk score with extreme thresholds
-        if has_injury_data and injury_risk != 0.5:
-            # Use real injury risk data - convert to 0-10 scale with extreme differentiation
-            # High risk (0.6-1.0) -> Very low score (1-3)
-            # Low risk (0.0-0.4) -> Very high score (8-10)
-            if injury_risk >= 0.6:
-                risk_score = 1.0 + (1.0 - injury_risk) * 5.0  # 0.6->3.0, 1.0->1.0
-            elif injury_risk >= 0.5:
-                risk_score = 3.0 + (0.6 - injury_risk) * 10.0  # 0.5->4.0, 0.6->3.0
-            elif injury_risk >= 0.45:
-                risk_score = 4.0 + (0.5 - injury_risk) * 20.0  # 0.45->5.0, 0.5->4.0
-            elif injury_risk >= 0.4:
-                risk_score = 5.0 + (0.45 - injury_risk) * 20.0  # 0.4->6.0, 0.45->5.0
-            elif injury_risk >= 0.35:
-                risk_score = 6.0 + (0.4 - injury_risk) * 20.0  # 0.35->7.0, 0.4->6.0
-            elif injury_risk >= 0.3:
-                risk_score = 7.0 + (0.35 - injury_risk) * 20.0  # 0.3->8.0, 0.35->7.0
-            elif injury_risk >= 0.25:
-                risk_score = 8.0 + (0.3 - injury_risk) * 20.0  # 0.25->9.0, 0.3->8.0
-            else:
-                risk_score = 9.0 + (0.25 - injury_risk) * 20.0  # 0.0->10.0, 0.25->9.0
+        # Get position-specific data for percentile calculations
+        position_data = self._get_position_injury_data(position)
+        
+        # Component 1: 2025 Season Risk (50% weight)
+        # Projected Games Missed (30% of total) - Percentile-based normalized (lower is better)
+        games_missed_score = self._percentile_normalize_metric(
+            projected_games_missed, position_data['projected_games_missed'], inverse=True
+        )
+        
+        # Risk Score (20% of total) - Direct mapping with improved spacing
+        risk_score_raw = self._parse_injury_risk_text_improved(injury_risk_text)
+        risk_score_normalized = (1.0 - risk_score_raw) * 10.0  # Convert to 0-10 scale
+        
+        season_risk = (games_missed_score * 0.6) + (risk_score_normalized * 0.4)  # 30% + 20% of total
+        
+        # Component 2: Historical Pattern Context (30% weight)
+        # Injuries Per Season (20% of total) - Percentile-based normalized (lower is better)
+        season_frequency_score = self._percentile_normalize_metric(
+            injuries_per_season, position_data['injuries_per_season'], inverse=True
+        )
+        
+        # Per Game Risk (10% of total) - Percentile-based normalized (lower is better)
+        game_risk_score = self._percentile_normalize_metric(
+            injury_risk_per_game, position_data['injury_risk_per_game'], inverse=True
+        )
+        
+        historical_context = (season_frequency_score * 0.667) + (game_risk_score * 0.333)  # 20% + 10% of total
+        
+        # Component 3: Current Physical State (20% weight)
+        # Durability Score (20% of total) - Percentile-based normalized (higher is better)
+        durability_score = self._percentile_normalize_metric(
+            durability, position_data['durability'], inverse=False
+        )
+        
+        # Calculate final weighted score
+        final_score = (
+            season_risk * 0.50 +      # Component 1: 50%
+            historical_context * 0.30 + # Component 2: 30%
+            durability_score * 0.20    # Component 3: 20%
+        )
+        
+        # Determine risk level based on final score
+        if final_score >= 8.0:
+            risk_level = "VERY LOW"
+        elif final_score >= 6.0:
+            risk_level = "LOW"
+        elif final_score >= 4.0:
+            risk_level = "MEDIUM"
+        elif final_score >= 2.0:
+            risk_level = "HIGH"
         else:
-            # Calculate risk based on games missed with extreme thresholds
-            if games_missed == 0:
-                risk_score = 9.0  # Very low risk
-            elif games_missed <= 1:
-                risk_score = 7.0   # Low risk
-            elif games_missed <= 2:
-                risk_score = 5.0   # Moderate risk
-            elif games_missed <= 4:
-                risk_score = 3.0   # High risk
-            elif games_missed <= 6:
-                risk_score = 2.0   # Very high risk
-            elif games_missed <= 8:
-                risk_score = 1.0   # Extremely high risk
-            else:
-                risk_score = 0.5   # Maximum risk
+            risk_level = "VERY HIGH"
         
-        # Calculate games missed penalty with extreme thresholds
-        if games_missed == 0:
-            games_score = 9.0
-        elif games_missed <= 1:
-            games_score = 7.0
-        elif games_missed <= 2:
-            games_score = 5.0
-        elif games_missed <= 4:
-            games_score = 3.0
-        elif games_missed <= 6:
-            games_score = 2.0
-        elif games_missed <= 8:
-            games_score = 1.0
+        # DEBUG OUTPUT for validation
+        print(f"DEBUG - {player_name} Injury Score: {final_score:.2f}/10, Risk Level: {risk_level}")
+        print(f"  Season Risk: {season_risk:.2f} (Games: {games_missed_score:.2f}, Risk: {risk_score_normalized:.2f})")
+        print(f"  Historical: {historical_context:.2f} (Freq: {season_frequency_score:.2f}, Game: {game_risk_score:.2f})")
+        print(f"  Durability: {durability_score:.2f}")
+        
+        return max(0.0, min(10.0, final_score))
+    
+    def _safe_float(self, value, default=0.0):
+        """Safely convert value to float, handling special cases."""
+        if pd.isna(value) or value == '':
+            return default
+        
+        # Handle "Injuries Per Season" with /yr suffix
+        if isinstance(value, str) and '/yr' in value:
+            try:
+                return float(value.replace('/yr', ''))
+            except:
+                return default
+        
+        # Handle percentage strings
+        if isinstance(value, str) and '%' in value:
+            try:
+                return float(value.replace('%', ''))
+            except:
+                return default
+        
+        try:
+            return float(value)
+        except:
+            return default
+    
+    def _parse_injury_risk_text_improved(self, risk_text):
+        """Convert injury risk text to numeric value using improved mapping."""
+        risk_text = str(risk_text).strip()
+        
+        # Improved mapping with even spacing (lower numbers = lower risk)
+        risk_score_mapping = {
+            'Very Low Risk': 0.15,    # Very Low Risk
+            'Low Risk': 0.30,         # Low Risk  
+            'Medium Risk': 0.50,       # Medium Risk (unchanged)
+            'High Risk': 0.70,         # High Risk
+            'Very High Risk': 0.85     # Very High Risk
+        }
+        
+        # Handle variations in text
+        risk_text_lower = risk_text.lower()
+        if 'very low' in risk_text_lower:
+            return 0.15
+        elif 'low' in risk_text_lower:
+            return 0.30
+        elif 'medium' in risk_text_lower:
+            return 0.50
+        elif 'high' in risk_text_lower:
+            return 0.70
+        elif 'very high' in risk_text_lower:
+            return 0.85
         else:
-            games_score = 0.5
+            return 0.50  # Default to medium
+    
+    def _get_injury_normalization_ranges(self, position):
+        """Get position-specific normalization ranges for injury metrics."""
+        # Base ranges (can be adjusted based on data analysis)
+        base_ranges = {
+            'projected_games_missed': (0, 8),      # 0-8 games missed
+            'injuries_per_season': (0, 3),          # 0-3 injuries per season
+            'injury_risk_per_game': (0, 15),        # 0-15% risk per game
+            'durability': (0, 5)                    # 0-5 durability scale
+        }
         
-        # Calculate history penalty with extreme thresholds
-        history_count = len(injury_history)
-        if history_count == 0:
-            history_score = 9.0
-        elif history_count == 1:
-            history_score = 7.0
-        elif history_count == 2:
-            history_score = 5.0
-        elif history_count == 3:
-            history_score = 3.0
-        elif history_count == 4:
-            history_score = 2.0
+        # Position-specific adjustments (minimal since we're removing position multipliers)
+        position_adjustments = {
+            'QB': {'projected_games_missed': (0, 6)},   # QBs miss fewer games
+            'RB': {'projected_games_missed': (0, 10)},  # RBs miss more games
+            'WR': {'projected_games_missed': (0, 8)},   # WRs miss moderate games
+            'TE': {'projected_games_missed': (0, 8)},   # TEs miss moderate games
+        }
+        
+        ranges = base_ranges.copy()
+        if position in position_adjustments:
+            ranges.update(position_adjustments[position])
+        
+        return ranges
+    
+    def _normalize_injury_metric(self, value, range_tuple, inverse=False):
+        """
+        Normalize injury metric using min-max scaling.
+        
+        Args:
+            value: Raw metric value
+            range_tuple: (min_val, max_val) for normalization
+            inverse: If True, invert the scale (lower values = higher scores)
+        
+        Returns:
+            Normalized score (0-10)
+        """
+        min_val, max_val = range_tuple
+        
+        # Handle edge cases
+        if min_val == max_val:
+            return 5.0  # Neutral score if no variance
+        
+        # Clamp value to range
+        clamped_value = max(min_val, min(max_val, value))
+        
+        # Normalize to 0-1 range
+        normalized = (clamped_value - min_val) / (max_val - min_val)
+        
+        # Apply inverse if needed
+        if inverse:
+            normalized = 1.0 - normalized
+        
+        # Convert to 0-10 scale
+        return normalized * 10.0
+
+    def _get_position_injury_data(self, position: str) -> Dict[str, List[float]]:
+        """Get all injury data for a position to calculate percentiles."""
+        try:
+            if position not in self.data_loader.injury_data:
+                return self._get_default_position_data()
+            
+            df = self.data_loader.injury_data[position]
+            
+            # Extract all available data for each metric
+            position_data = {
+                'projected_games_missed': df['Projected\nGames\nMissed'].dropna().tolist(),
+                'injuries_per_season': df['Injuries\nPer Season'].dropna().apply(self._safe_float).tolist(),
+                'injury_risk_per_game': df['Injury Risk\nPer Game'].dropna().apply(self._safe_float).tolist(),
+                'durability': df['Durability'].dropna().apply(self._safe_float).tolist()
+            }
+            
+            return position_data
+            
+        except Exception as e:
+            print(f"Warning: Could not get position data for {position}: {str(e)}")
+            return self._get_default_position_data()
+    
+    def _get_default_position_data(self) -> Dict[str, List[float]]:
+        """Get default data ranges when position data is not available."""
+        return {
+            'projected_games_missed': list(range(0, 9)),  # 0-8 games
+            'injuries_per_season': [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0],  # 0-3 injuries
+            'injury_risk_per_game': list(range(0, 16)),  # 0-15% risk
+            'durability': [1.0, 2.0, 3.0, 4.0, 5.0]  # 1-5 durability
+        }
+    
+    def _percentile_normalize_metric(self, value: float, data_list: List[float], inverse: bool = False) -> float:
+        """
+        Normalize metric using percentile-based scoring with specified distribution.
+        
+        Args:
+            value: Raw metric value
+            data_list: List of all values for this metric in the position
+            inverse: If True, invert the scale (lower values = higher scores)
+        
+        Returns:
+            Normalized score (1-10) based on percentile distribution
+        """
+        if not data_list or len(data_list) < 2:
+            return 5.0  # Neutral score if no data
+        
+        # Calculate percentile of the value
+        sorted_data = sorted(data_list)
+        percentile = self._calculate_percentile(value, sorted_data)
+        
+        # Apply inverse if needed
+        if inverse:
+            percentile = 1.0 - percentile
+        
+        # Map percentile to score using specified distribution
+        score = self._map_percentile_to_score(percentile)
+        
+        return score
+    
+    def _calculate_percentile(self, value: float, sorted_data: List[float]) -> float:
+        """Calculate percentile of value in sorted data."""
+        if value <= sorted_data[0]:
+            return 0.0
+        if value >= sorted_data[-1]:
+            return 1.0
+        
+        # Find position in sorted data
+        for i, data_point in enumerate(sorted_data):
+            if value <= data_point:
+                # Linear interpolation
+                if i == 0:
+                    return 0.0
+                prev_value = sorted_data[i-1]
+                return (i - 1 + (value - prev_value) / (data_point - prev_value)) / len(sorted_data)
+        
+        return 1.0
+    
+    def _map_percentile_to_score(self, percentile: float) -> float:
+        """
+        Map percentile to score using specified distribution:
+        - Bottom 5% → 1.0, Bottom 15% → 2.5, Bottom 35% → 4.0
+        - Middle 30% → 6.0, Top 20% → 8.0, Top 10% → 9.0, Top 5% → 10.0
+        """
+        if percentile <= 0.05:
+            return 1.0
+        elif percentile <= 0.15:
+            # Linear interpolation between 1.0 and 2.5
+            return 1.0 + (percentile - 0.05) * (1.5 / 0.10)
+        elif percentile <= 0.35:
+            # Linear interpolation between 2.5 and 4.0
+            return 2.5 + (percentile - 0.15) * (1.5 / 0.20)
+        elif percentile <= 0.65:
+            # Linear interpolation between 4.0 and 6.0
+            return 4.0 + (percentile - 0.35) * (2.0 / 0.30)
+        elif percentile <= 0.80:
+            # Linear interpolation between 6.0 and 8.0
+            return 6.0 + (percentile - 0.65) * (2.0 / 0.15)
+        elif percentile <= 0.90:
+            # Linear interpolation between 8.0 and 9.0
+            return 8.0 + (percentile - 0.80) * (1.0 / 0.10)
+        elif percentile <= 0.95:
+            # Linear interpolation between 9.0 and 10.0
+            return 9.0 + (percentile - 0.90) * (1.0 / 0.05)
         else:
-            history_score = 1.0
-        
-        # Calculate age factor with extreme thresholds
-        age_factor = self._calculate_extreme_age_factor(age)
-        
-        # Use weighted combination that heavily emphasizes the worst factors
-        scores = [risk_score, games_score, history_score, age_factor]
-        min_score = min(scores)
-        avg_score = sum(scores) / len(scores)
-        
-        # Combine with heavy emphasis on the worst component
-        injury_score = (min_score * 0.8 + avg_score * 0.2)
-        
-        return max(0.0, min(10.0, injury_score))
+            return 10.0
 
     def _calculate_extreme_age_factor(self, age):
         """Calculate age-based injury risk factor with extreme thresholds."""
