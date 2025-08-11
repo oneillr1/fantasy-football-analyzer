@@ -204,6 +204,20 @@ SUPPORTED_YEARS = list(range(2019, 2025))
 # ML Model Types
 ML_MODEL_TYPES = ['breakout', 'consistency', 'positional_value', 'injury_risk']
 
+# Positional Value Analysis Constants
+POSITIONAL_ANALYSIS_CONSTANTS = {
+    'min_players_per_position': 5,
+    'min_players_per_round': 3,
+    'default_league_size': 12,
+    'analysis_rounds': 4,  # Analyze first 4 rounds
+    'position_tiers': {
+        'QB': [(1, 5), (6, 12), (13, 24)],
+        'RB': [(1, 5), (6, 12), (13, 24), (25, 36)],
+        'WR': [(1, 5), (6, 12), (13, 24), (25, 36)],
+        'TE': [(1, 3), (4, 8), (9, 16)]
+    }
+}
+
 # Default Values
 DEFAULT_SCORE = 0.0
 DEFAULT_WEIGHT = 1.0

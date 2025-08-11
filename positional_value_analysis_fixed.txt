@@ -1,0 +1,504 @@
+POSITIONAL VALUE ANALYZER
+Historical Drop-off and Point Differential Analysis
+================================================================================
+
+PURPOSE: Understand the cost of waiting to draft each position
+METHODOLOGY: Compare point differentials between position ranks across years
+
+POSITION DROP-OFF ANALYSIS
+==================================================
+
+QB POSITION ANALYSIS
+------------------------------
+Average Points by Position Rank:
+  QB1-5: 371.7 points
+  QB6-12: 301.9 points
+  QB13-24: 224.0 points
+
+Drop-off Analysis:
+  QB1-5 vs QB6-12: 69.7 points
+  QB6-12 vs QB13-24: 78.0 points
+
+Round Analysis:
+  Round 2: 359.5 avg points (9 players, MED confidence)
+  Round 3: 348.1 avg points (6 players, MED confidence)
+  Round 4: 266.8 avg points (9 players, MED confidence)
+  Round 5: 294.4 avg points (14 players, HIGH confidence)
+  Round 6: 276.1 avg points (8 players, MED confidence)
+  Round 7: 306.6 avg points (7 players, MED confidence)
+  Round 8: 261.9 avg points (13 players, HIGH confidence)
+  Round 9: 209.9 avg points (12 players, HIGH confidence)
+  Round 10: 201.5 avg points (7 players, MED confidence)
+  Round 11: 246.8 avg points (9 players, MED confidence)
+  Round 12: 191.8 avg points (8 players, MED confidence)
+  Round 13: 186.4 avg points (8 players, MED confidence)
+  Round 14: 259.2 avg points (18 players, HIGH confidence)
+  Round 15: 197.7 avg points (19 players, HIGH confidence)
+
+RB POSITION ANALYSIS
+------------------------------
+Average Points by Position Rank:
+  RB1-5: 290.1 points
+  RB6-12: 219.2 points
+  RB13-24: 177.8 points
+  RB25-36: 134.1 points
+
+Drop-off Analysis:
+  RB1-5 vs RB6-12: 70.9 points
+  RB6-12 vs RB13-24: 41.3 points
+  RB13-24 vs RB25-36: 43.7 points
+
+Round Analysis:
+  Round 1: 214.9 avg points (43 players, HIGH confidence)
+  Round 2: 196.0 avg points (28 players, HIGH confidence)
+  Round 3: 175.1 avg points (20 players, HIGH confidence)
+  Round 4: 157.9 avg points (26 players, HIGH confidence)
+  Round 5: 144.3 avg points (21 players, HIGH confidence)
+  Round 6: 146.2 avg points (26 players, HIGH confidence)
+  Round 7: 149.4 avg points (14 players, HIGH confidence)
+  Round 8: 106.5 avg points (27 players, HIGH confidence)
+  Round 9: 106.7 avg points (18 players, HIGH confidence)
+  Round 10: 87.8 avg points (17 players, HIGH confidence)
+  Round 11: 89.9 avg points (18 players, HIGH confidence)
+  Round 12: 121.8 avg points (10 players, HIGH confidence)
+  Round 13: 87.1 avg points (24 players, HIGH confidence)
+  Round 14: 71.4 avg points (24 players, HIGH confidence)
+  Round 15: 90.6 avg points (21 players, HIGH confidence)
+
+WR POSITION ANALYSIS
+------------------------------
+Average Points by Position Rank:
+  WR1-5: 266.6 points
+  WR6-12: 212.6 points
+  WR13-24: 183.3 points
+  WR25-36: 155.2 points
+
+Drop-off Analysis:
+  WR1-5 vs WR6-12: 53.9 points
+  WR6-12 vs WR13-24: 29.3 points
+  WR13-24 vs WR25-36: 28.1 points
+
+Round Analysis:
+  Round 1: 233.0 avg points (26 players, HIGH confidence)
+  Round 2: 175.6 avg points (29 players, HIGH confidence)
+  Round 3: 164.1 avg points (30 players, HIGH confidence)
+  Round 4: 171.6 avg points (29 players, HIGH confidence)
+  Round 5: 168.7 avg points (27 players, HIGH confidence)
+  Round 6: 136.1 avg points (30 players, HIGH confidence)
+  Round 7: 131.6 avg points (27 players, HIGH confidence)
+  Round 8: 133.3 avg points (24 players, HIGH confidence)
+  Round 9: 131.4 avg points (23 players, HIGH confidence)
+  Round 10: 131.3 avg points (26 players, HIGH confidence)
+  Round 11: 86.0 avg points (16 players, HIGH confidence)
+  Round 12: 105.6 avg points (21 players, HIGH confidence)
+  Round 13: 110.9 avg points (24 players, HIGH confidence)
+  Round 14: 88.1 avg points (24 players, HIGH confidence)
+  Round 15: 76.9 avg points (39 players, HIGH confidence)
+
+TE POSITION ANALYSIS
+------------------------------
+Average Points by Position Rank:
+  TE1-3: 196.4 points
+  TE4-8: 144.8 points
+  TE9-16: 112.5 points
+
+Drop-off Analysis:
+  TE1-3 vs TE4-8: 51.7 points
+  TE4-8 vs TE9-16: 32.2 points
+
+Round Analysis:
+  Round 2: 181.4 avg points (6 players, MED confidence)
+  Round 3: 138.6 avg points (7 players, MED confidence)
+  Round 4: 133.5 avg points (7 players, MED confidence)
+  Round 5: 138.9 avg points (11 players, HIGH confidence)
+  Round 6: 117.4 avg points (8 players, MED confidence)
+  Round 7: 96.3 avg points (10 players, HIGH confidence)
+  Round 8: 94.2 avg points (6 players, MED confidence)
+  Round 9: 121.9 avg points (6 players, MED confidence)
+  Round 10: 113.6 avg points (7 players, MED confidence)
+  Round 11: 103.8 avg points (5 players, MED confidence)
+  Round 12: 88.0 avg points (8 players, MED confidence)
+  Round 13: 93.6 avg points (11 players, HIGH confidence)
+  Round 14: 79.1 avg points (12 players, HIGH confidence)
+  Round 15: 63.9 avg points (12 players, HIGH confidence)
+
+POSITIONAL REPLACEMENT VALUE ANALYSIS
+==================================================
+
+How many points do you lose by waiting to draft each position?
+
+COST OF WAITING BY POSITION
+----------------------------------------
+
+QB Replacement Cost:
+  Round 2 vs Round 3: 11.4 points lost
+  Round 3 vs Round 4: 81.3 points lost
+  Round 4 vs Round 5: -27.5 points lost
+  Round 5 vs Round 6: 18.3 points lost
+  Round 6 vs Round 7: -30.5 points lost
+  Round 7 vs Round 8: 44.8 points lost
+  Round 8 vs Round 9: 51.9 points lost
+  Round 9 vs Round 10: 8.4 points lost
+  Round 10 vs Round 11: -45.3 points lost
+  Round 11 vs Round 12: 55.0 points lost
+  Round 12 vs Round 13: 5.3 points lost
+  Round 13 vs Round 14: -72.7 points lost
+  Round 14 vs Round 15: 61.5 points lost
+
+RB Replacement Cost:
+  Round 1 vs Round 2: 18.9 points lost
+  Round 2 vs Round 3: 20.8 points lost
+  Round 3 vs Round 4: 17.2 points lost
+  Round 4 vs Round 5: 13.6 points lost
+  Round 5 vs Round 6: -1.9 points lost
+  Round 6 vs Round 7: -3.2 points lost
+  Round 7 vs Round 8: 42.8 points lost
+  Round 8 vs Round 9: -0.2 points lost
+  Round 9 vs Round 10: 18.9 points lost
+  Round 10 vs Round 11: -2.1 points lost
+  Round 11 vs Round 12: -31.9 points lost
+  Round 12 vs Round 13: 34.7 points lost
+  Round 13 vs Round 14: 15.6 points lost
+  Round 14 vs Round 15: -19.2 points lost
+
+WR Replacement Cost:
+  Round 1 vs Round 2: 57.5 points lost
+  Round 2 vs Round 3: 11.5 points lost
+  Round 3 vs Round 4: -7.5 points lost
+  Round 4 vs Round 5: 2.8 points lost
+  Round 5 vs Round 6: 32.7 points lost
+  Round 6 vs Round 7: 4.5 points lost
+  Round 7 vs Round 8: -1.7 points lost
+  Round 8 vs Round 9: 1.9 points lost
+  Round 9 vs Round 10: 0.2 points lost
+  Round 10 vs Round 11: 45.2 points lost
+  Round 11 vs Round 12: -19.6 points lost
+  Round 12 vs Round 13: -5.3 points lost
+  Round 13 vs Round 14: 22.8 points lost
+  Round 14 vs Round 15: 11.2 points lost
+
+TE Replacement Cost:
+  Round 2 vs Round 3: 42.8 points lost
+  Round 3 vs Round 4: 5.1 points lost
+  Round 4 vs Round 5: -5.4 points lost
+  Round 5 vs Round 6: 21.5 points lost
+  Round 6 vs Round 7: 21.0 points lost
+  Round 7 vs Round 8: 2.2 points lost
+  Round 8 vs Round 9: -27.7 points lost
+  Round 9 vs Round 10: 8.3 points lost
+  Round 10 vs Round 11: 9.8 points lost
+  Round 11 vs Round 12: 15.8 points lost
+  Round 12 vs Round 13: -5.5 points lost
+  Round 13 vs Round 14: 14.4 points lost
+  Round 14 vs Round 15: 15.2 points lost
+OPPORTUNITY COST MATRIX
+==================================================
+
+Cross-position comparisons by draft round
+
+ROUND 1 COMPARISON:
+-------------------------
+  WR: 233.0 avg points (26 players, HIGH confidence)
+       Advantage over worst: +18.2 points
+  RB: 214.9 avg points (43 players, HIGH confidence)
+  → Best choice: WR (+18.2 points over RB)
+
+ROUND 2 COMPARISON:
+-------------------------
+  QB: 359.5 avg points (9 players, MED confidence)
+       Advantage over worst: +183.9 points
+  RB: 196.0 avg points (28 players, HIGH confidence)
+       Advantage over worst: +20.4 points
+  TE: 181.4 avg points (6 players, MED confidence)
+       Advantage over worst: +5.8 points
+  WR: 175.6 avg points (29 players, HIGH confidence)
+  → Best choice: QB (+183.9 points over WR)
+
+ROUND 3 COMPARISON:
+-------------------------
+  QB: 348.1 avg points (6 players, MED confidence)
+       Advantage over worst: +209.5 points
+  RB: 175.1 avg points (20 players, HIGH confidence)
+       Advantage over worst: +36.5 points
+  WR: 164.1 avg points (30 players, HIGH confidence)
+       Advantage over worst: +25.5 points
+  TE: 138.6 avg points (7 players, MED confidence)
+  → Best choice: QB (+209.5 points over TE)
+
+ROUND 4 COMPARISON:
+-------------------------
+  QB: 266.8 avg points (9 players, MED confidence)
+       Advantage over worst: +133.4 points
+  WR: 171.6 avg points (29 players, HIGH confidence)
+       Advantage over worst: +38.1 points
+  RB: 157.9 avg points (26 players, HIGH confidence)
+       Advantage over worst: +24.5 points
+  TE: 133.5 avg points (7 players, MED confidence)
+  → Best choice: QB (+133.4 points over TE)
+
+ROUND 5 COMPARISON:
+-------------------------
+  QB: 294.4 avg points (14 players, HIGH confidence)
+       Advantage over worst: +155.5 points
+  WR: 168.7 avg points (27 players, HIGH confidence)
+       Advantage over worst: +29.9 points
+  RB: 144.3 avg points (21 players, HIGH confidence)
+       Advantage over worst: +5.5 points
+  TE: 138.9 avg points (11 players, HIGH confidence)
+  → Best choice: QB (+155.5 points over TE)
+
+RISK-ADJUSTED VALUE ANALYSIS
+==================================================
+
+QB RISK ANALYSIS
+--------------------
+  Round 2 (9 players):
+    Hit Rate (finish top 12): 100.0%
+    Bust Rate (<50% of avg): 0.0%
+    Bust Rate (<100 pts): 0.0%
+    Average Points: 359.5
+
+  Round 3 (6 players):
+    Hit Rate (finish top 12): 100.0%
+    Bust Rate (<50% of avg): 0.0%
+    Bust Rate (<100 pts): 0.0%
+    Average Points: 348.1
+
+  Round 4 (9 players):
+    Hit Rate (finish top 12): 33.3%
+    Bust Rate (<50% of avg): 0.0%
+    Bust Rate (<100 pts): 0.0%
+    Average Points: 266.8
+
+  Round 5 (14 players):
+    Hit Rate (finish top 12): 57.1%
+    Bust Rate (<50% of avg): 0.0%
+    Bust Rate (<100 pts): 0.0%
+    Average Points: 294.4
+
+
+RB RISK ANALYSIS
+--------------------
+  Round 1 (43 players):
+    Hit Rate (finish top 24): 74.4%
+    Bust Rate (<50% of avg): 7.0%
+    Bust Rate (<100 pts): 11.6%
+    Average Points: 214.9
+
+  Round 2 (28 players):
+    Hit Rate (finish top 24): 82.1%
+    Bust Rate (<50% of avg): 7.1%
+    Bust Rate (<100 pts): 7.1%
+    Average Points: 196.0
+
+  Round 3 (20 players):
+    Hit Rate (finish top 24): 70.0%
+    Bust Rate (<50% of avg): 5.0%
+    Bust Rate (<100 pts): 10.0%
+    Average Points: 175.1
+
+  Round 4 (26 players):
+    Hit Rate (finish top 24): 61.5%
+    Bust Rate (<50% of avg): 11.5%
+    Bust Rate (<100 pts): 15.4%
+    Average Points: 157.9
+
+  Round 5 (21 players):
+    Hit Rate (finish top 24): 28.6%
+    Bust Rate (<50% of avg): 4.8%
+    Bust Rate (<100 pts): 28.6%
+    Average Points: 144.3
+
+
+WR RISK ANALYSIS
+--------------------
+  Round 1 (26 players):
+    Hit Rate (finish top 24): 92.3%
+    Bust Rate (<50% of avg): 0.0%
+    Bust Rate (<100 pts): 3.8%
+    Average Points: 233.0
+
+  Round 2 (29 players):
+    Hit Rate (finish top 24): 51.7%
+    Bust Rate (<50% of avg): 3.4%
+    Bust Rate (<100 pts): 10.3%
+    Average Points: 175.6
+
+  Round 3 (30 players):
+    Hit Rate (finish top 24): 63.3%
+    Bust Rate (<50% of avg): 3.3%
+    Bust Rate (<100 pts): 16.7%
+    Average Points: 164.1
+
+  Round 4 (29 players):
+    Hit Rate (finish top 24): 55.2%
+    Bust Rate (<50% of avg): 0.0%
+    Bust Rate (<100 pts): 10.3%
+    Average Points: 171.6
+
+  Round 5 (27 players):
+    Hit Rate (finish top 24): 55.6%
+    Bust Rate (<50% of avg): 3.7%
+    Bust Rate (<100 pts): 7.4%
+    Average Points: 168.7
+
+
+TE RISK ANALYSIS
+--------------------
+  Round 2 (6 players):
+    Hit Rate (finish top 12): 66.7%
+    Bust Rate (<50% of avg): 0.0%
+    Bust Rate (<100 pts): 0.0%
+    Average Points: 181.4
+
+  Round 3 (7 players):
+    Hit Rate (finish top 12): 85.7%
+    Bust Rate (<50% of avg): 0.0%
+    Bust Rate (<100 pts): 14.3%
+    Average Points: 138.6
+
+  Round 4 (7 players):
+    Hit Rate (finish top 12): 71.4%
+    Bust Rate (<50% of avg): 0.0%
+    Bust Rate (<100 pts): 28.6%
+    Average Points: 133.5
+
+  Round 5 (11 players):
+    Hit Rate (finish top 12): 54.5%
+    Bust Rate (<50% of avg): 0.0%
+    Bust Rate (<100 pts): 36.4%
+    Average Points: 138.9
+
+
+POSITIONAL SCARCITY INDEX
+==================================================
+
+Scarcity Score = (Elite Tier Avg - Replacement Avg) / Replacement Avg
+
+SCARCITY RANKINGS (Most to Least Scarce):
+---------------------------------------------
+1. RB
+   Scarcity Score: 0.47 (47% above replacement)
+   Elite Tier (Top 12): 331.7 avg points
+   Replacement Level: 226.2 avg points
+
+2. WR
+   Scarcity Score: 0.40 (40% above replacement)
+   Elite Tier (Top 12): 302.8 avg points
+   Replacement Level: 216.4 avg points
+
+3. TE
+   Scarcity Score: 0.23 (23% above replacement)
+   Elite Tier (Top 12): 210.3 avg points
+   Replacement Level: 170.8 avg points
+
+4. QB
+   Scarcity Score: 0.09 (9% above replacement)
+   Elite Tier (Top 12): 402.4 avg points
+   Replacement Level: 370.8 avg points
+
+VALUE OVER REPLACEMENT BY ROUND
+==================================================
+
+ROUND 1 VALUE OVER REPLACEMENT:
+-----------------------------------
+  WR: 8% above replacement (+16.6 pts)
+       233.0 avg points vs 216.4 replacement
+       (26 players, HIGH confidence)
+
+  RB: -5% above replacement (+-11.3 pts)
+       214.9 avg points vs 226.2 replacement
+       (43 players, HIGH confidence)
+
+
+ROUND 2 VALUE OVER REPLACEMENT:
+-----------------------------------
+  TE: 6% above replacement (+10.6 pts)
+       181.4 avg points vs 170.8 replacement
+       (6 players, MED confidence)
+
+  QB: -3% above replacement (+-11.3 pts)
+       359.5 avg points vs 370.8 replacement
+       (9 players, MED confidence)
+
+  RB: -13% above replacement (+-30.3 pts)
+       196.0 avg points vs 226.2 replacement
+       (28 players, HIGH confidence)
+
+  WR: -19% above replacement (+-40.8 pts)
+       175.6 avg points vs 216.4 replacement
+       (29 players, HIGH confidence)
+
+
+ROUND 3 VALUE OVER REPLACEMENT:
+-----------------------------------
+  QB: -6% above replacement (+-22.7 pts)
+       348.1 avg points vs 370.8 replacement
+       (6 players, MED confidence)
+
+  TE: -19% above replacement (+-32.2 pts)
+       138.6 avg points vs 170.8 replacement
+       (7 players, MED confidence)
+
+  RB: -23% above replacement (+-51.1 pts)
+       175.1 avg points vs 226.2 replacement
+       (20 players, HIGH confidence)
+
+  WR: -24% above replacement (+-52.3 pts)
+       164.1 avg points vs 216.4 replacement
+       (30 players, HIGH confidence)
+
+
+ROUND 4 VALUE OVER REPLACEMENT:
+-----------------------------------
+  WR: -21% above replacement (+-44.9 pts)
+       171.6 avg points vs 216.4 replacement
+       (29 players, HIGH confidence)
+
+  TE: -22% above replacement (+-37.3 pts)
+       133.5 avg points vs 170.8 replacement
+       (7 players, MED confidence)
+
+  QB: -28% above replacement (+-104.0 pts)
+       266.8 avg points vs 370.8 replacement
+       (9 players, MED confidence)
+
+  RB: -30% above replacement (+-68.3 pts)
+       157.9 avg points vs 226.2 replacement
+       (26 players, HIGH confidence)
+
+
+ROUND 5 VALUE OVER REPLACEMENT:
+-----------------------------------
+  TE: -19% above replacement (+-32.0 pts)
+       138.9 avg points vs 170.8 replacement
+       (11 players, HIGH confidence)
+
+  QB: -21% above replacement (+-76.4 pts)
+       294.4 avg points vs 370.8 replacement
+       (14 players, HIGH confidence)
+
+  WR: -22% above replacement (+-47.7 pts)
+       168.7 avg points vs 216.4 replacement
+       (27 players, HIGH confidence)
+
+  RB: -36% above replacement (+-81.9 pts)
+       144.3 avg points vs 226.2 replacement
+       (21 players, HIGH confidence)
+
+
+DRAFT STRATEGY RECOMMENDATIONS
+==================================================
+
+ROUND 1-3 POSITIONAL STRATEGY:
+------------------------------
+  • Round 1: WR historically strongest (233.0 avg points)
+  • Round 2: QB historically strongest (359.5 avg points)
+  • Round 3: QB historically strongest (348.1 avg points)
+
+KEY INSIGHTS:
+---------------
+  • TE shows highest scarcity (49.3 point drop-off)
+  • QB shows lowest scarcity (27.3 point drop-off)
+  • Focus on positions with largest point differentials between tiers
+  • Consider waiting on positions with smaller drop-offs

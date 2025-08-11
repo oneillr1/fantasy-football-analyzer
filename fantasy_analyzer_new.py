@@ -14,6 +14,7 @@ from modules.ml_models import MLModels
 from modules.player_analysis import PlayerAnalyzer
 from modules.league_analysis import LeagueAnalyzer
 from modules.value_analysis import ValueAnalyzer
+from modules.positional_value_analyzer import PositionalValueAnalyzer
 from modules.reporting import ReportGenerator
 from modules.utils import FantasyUtils
 
@@ -46,9 +47,10 @@ class FantasyFootballAnalyzer:
         self.player_analyzer = PlayerAnalyzer(self.data_loader, self.scoring_engine, self.ml_models)
         self.league_analyzer = LeagueAnalyzer(self.data_loader)
         self.value_analyzer = ValueAnalyzer(self.data_loader, self.scoring_engine)
+        self.positional_value_analyzer = PositionalValueAnalyzer(self.data_loader)
         self.report_generator = ReportGenerator(
             self.data_loader, self.scoring_engine, self.player_analyzer, 
-            self.league_analyzer, self.value_analyzer
+            self.league_analyzer, self.value_analyzer, self.positional_value_analyzer
         )
         
         # Configuration
@@ -103,6 +105,22 @@ class FantasyFootballAnalyzer:
         """Run a scoring system test."""
         return self.report_generator.run_scoring_test(num_players)
     
+    # NEW: Positional Value Analysis Methods
+    def analyze_positional_dropoffs(self) -> str:
+        """Analyze historical positional drop-offs and replacement values."""
+        return self.positional_value_analyzer.analyze_historical_positional_dropoffs()
+    
+    def save_positional_analysis(self, filename: str = "positional_value_analysis.txt") -> str:
+        """Save positional value analysis to a file."""
+        analysis_content = self.analyze_positional_dropoffs()
+        
+        with open(filename, 'w') as f:
+            f.write(analysis_content)
+        
+        print(f"Positional value analysis saved to: {filename}")
+        return filename
+    
+    # Existing methods continue...
     def analyze_draft_reaches_and_values(self) -> str:
         """Analyze draft reaches and values."""
         return self.league_analyzer.analyze_draft_reaches_and_values()
@@ -189,9 +207,9 @@ if __name__ == "__main__":
         print("\nTesting complete! To run full analysis, set enable_testing_mode=False")
         exit()
     
-    # Generate dual output system
+    # Generate triple output system (NEW!)
     print("\n" + "="*60)
-    print("GENERATING DUAL OUTPUT SYSTEM")
+    print("GENERATING TRIPLE OUTPUT SYSTEM")
     print("="*60)
     
     # 1. Generate league analysis (existing functionality)
@@ -199,7 +217,7 @@ if __name__ == "__main__":
     league_report = analyzer.save_report("league_analysis.txt")
     print(f"League analysis saved to: {league_report}")
     
-    # 2. Generate ML-enhanced player profiles
+    # 2. Generate ML-enhanced player profiles (existing functionality)
     print("\nGenerating ML-enhanced player profiles...")
     player_profiles = analyzer.generate_player_profiles()
     profiles_file = analyzer.save_player_profiles(player_profiles, "player_profiles.txt")
@@ -209,6 +227,11 @@ if __name__ == "__main__":
     print(f" JSON profiles for Custom GPT saved to: {json_file}")
     print(f" Generated profiles for {len(player_profiles)} players")
     
+    # 3. Generate positional value analysis (NEW!)
+    print("\nGenerating positional value analysis...")
+    positional_file = analyzer.save_positional_analysis("positional_value_analysis.txt")
+    print(f" Positional analysis saved to: {positional_file}")
+    
     # Summary
     print(f"\n ANALYSIS COMPLETE!")
     print("="*40)
@@ -216,5 +239,6 @@ if __name__ == "__main__":
     print(f"  • {league_report} - League draft tendencies and manager profiles")
     print(f"  • {profiles_file} - ML-enhanced player profiles")
     print(f"  • {json_file} - JSON format for Custom GPT integration")
+    print(f"  • {positional_file} - Positional drop-off and replacement value analysis")
     print("\nReady for 2025 fantasy draft! ")
     print("\nTo run scoring tests: Set enable_testing_mode=True and run again") 

@@ -17,7 +17,7 @@ class ReportGenerator:
     Handles all report generation and file output.
     """
     
-    def __init__(self, data_loader, scoring_engine, player_analyzer, league_analyzer, value_analyzer):
+    def __init__(self, data_loader, scoring_engine, player_analyzer, league_analyzer, value_analyzer, positional_value_analyzer):
         """
         Initialize the report generator.
         
@@ -27,12 +27,14 @@ class ReportGenerator:
             player_analyzer: PlayerAnalyzer instance
             league_analyzer: LeagueAnalyzer instance
             value_analyzer: ValueAnalyzer instance
+            positional_value_analyzer: PositionalValueAnalyzer instance
         """
         self.data_loader = data_loader
         self.scoring_engine = scoring_engine
         self.player_analyzer = player_analyzer
         self.league_analyzer = league_analyzer
         self.value_analyzer = value_analyzer
+        self.positional_value_analyzer = positional_value_analyzer
     
     def generate_comprehensive_report(self) -> str:
         """

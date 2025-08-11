@@ -8,6 +8,7 @@ This package contains the modular components of the Fantasy Football Analyzer:
 - player_analysis: Individual player analysis
 - league_analysis: League-specific analysis
 - value_analysis: ADP and value analysis
+- positional_value_analyzer: Positional drop-off and replacement value analysis
 - reporting: Report generation and output
 - utils: Utilities and logging
 """
@@ -18,6 +19,7 @@ from .ml_models import MLModels
 from .player_analysis import PlayerAnalyzer
 from .league_analysis import LeagueAnalyzer
 from .value_analysis import ValueAnalyzer
+from .positional_value_analyzer import PositionalValueAnalyzer
 from .reporting import ReportGenerator
 from .utils import FantasyUtils
 
@@ -28,6 +30,7 @@ __all__ = [
     'PlayerAnalyzer',
     'LeagueAnalyzer',
     'ValueAnalyzer',
+    'PositionalValueAnalyzer',
     'ReportGenerator',
     'FantasyUtils'
 ] 
