@@ -45,6 +45,9 @@ class FantasyFootballAnalyzer:
         
         # Initialize analysis components
         self.player_analyzer = PlayerAnalyzer(self.data_loader, self.scoring_engine, self.ml_models)
+        
+        # Set cross-references after initialization
+        self.scoring_engine.set_player_analyzer(self.player_analyzer)
         self.league_analyzer = LeagueAnalyzer(self.data_loader)
         self.value_analyzer = ValueAnalyzer(self.data_loader, self.scoring_engine)
         self.positional_value_analyzer = PositionalValueAnalyzer(self.data_loader)

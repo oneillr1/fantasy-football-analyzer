@@ -34,6 +34,7 @@ class ScoringEngine:
             data_loader: DataLoader instance for accessing data
         """
         self.data_loader = data_loader
+        self.player_analyzer = None  # Will be set after initialization
         
         # Metric descriptions for better analysis
         self.metric_descriptions = {
@@ -63,6 +64,10 @@ class ScoringEngine:
             '% TM': 'Team Target Share - Usage percentage',
             'CATCHABLE': 'Catchable Targets - Quality of targets'
         }
+    
+    def set_player_analyzer(self, player_analyzer):
+        """Set the player analyzer reference after initialization."""
+        self.player_analyzer = player_analyzer
     
     def calculate_advanced_score_universal(self, player_row, position: str) -> Tuple[float, Dict]:
         """
@@ -889,13 +894,13 @@ class ScoringEngine:
         )
         
         # Determine risk level based on final score
-        if final_score >= 8.0:
+        if final_score >= 8.5:
             risk_level = "VERY LOW"
-        elif final_score >= 6.0:
+        elif final_score >= 6.5:
             risk_level = "LOW"
-        elif final_score >= 4.0:
+        elif final_score >= 4.5:
             risk_level = "MEDIUM"
-        elif final_score >= 2.0:
+        elif final_score >= 2.5:
             risk_level = "HIGH"
         else:
             risk_level = "VERY HIGH"
@@ -1001,16 +1006,17 @@ class ScoringEngine:
         
         # Handle variations in text
         risk_text_lower = risk_text.lower()
-        if 'very low' in risk_text_lower:
+        # Check "very" conditions first to avoid substring matching issues
+        if 'very high' in risk_text_lower:
+            return 0.85
+        elif 'very low' in risk_text_lower:
             return 0.15
+        elif 'high' in risk_text_lower:
+            return 0.70
         elif 'low' in risk_text_lower:
             return 0.30
         elif 'medium' in risk_text_lower:
             return 0.50
-        elif 'high' in risk_text_lower:
-            return 0.70
-        elif 'very high' in risk_text_lower:
-            return 0.85
         else:
             return 0.50  # Default to medium
     

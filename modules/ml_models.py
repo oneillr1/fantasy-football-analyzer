@@ -204,8 +204,8 @@ class MLModels:
         
         # NEW: Use scoring engine's improved injury system if available
         if self.scoring_engine is not None:
-            # Get injury profile using scoring engine's system
-            injury_profile = self._get_injury_profile_for_ml(player, position)
+            # Get injury profile using main player analyzer function (consolidated)
+            injury_profile = self.scoring_engine.player_analyzer.get_injury_profile(player, position)
             
             # Check if we have real injury data
             has_real_injury_data = injury_profile.get('has_injury_data', False)
@@ -451,79 +451,7 @@ class MLModels:
                 predictions[model_type] = DEFAULT_SCORE
         return predictions
 
-    def _get_injury_profile_for_ml(self, player: str, position: str) -> Dict[str, Any]:
-        """
-        Get injury profile for ML models using the scoring engine's system.
-        
-        Args:
-            player: Player name
-            position: Player position
-            
-        Returns:
-            Dictionary with injury profile data
-        """
-        injury_profile = {
-            'projected_games_missed': 0,
-            'injury_risk': 'Medium Risk',
-            'injuries_per_season': 0,
-            'injury_risk_per_game': 0,
-            'durability': 5,
-            'has_injury_data': False
-        }
-        
-        # Get injury data from scoring engine's data source
-        if position in self.injury_data:
-            df = self.injury_data[position]
-            
-            # Try to find player in injury data
-            for _, row in df.iterrows():
-                player_name_col = None
-                for col in df.columns:
-                    if 'player' in col.lower() or 'name' in col.lower():
-                        player_name_col = col
-                        break
-                
-                if player_name_col is None:
-                    continue
-                
-                injury_player = str(row[player_name_col]).strip()
-                if player in injury_player or injury_player in player:
-                    # Extract injury metrics using scoring engine's parsing
-                    for col in df.columns:
-                        if 'projected' in col.lower() and 'missed' in col.lower():
-                            try:
-                                injury_profile['projected_games_missed'] = float(row[col])
-                            except (ValueError, TypeError):
-                                pass
-                        elif 'injuries' in col.lower() and 'season' in col.lower():
-                            try:
-                                value = str(row[col])
-                                if '/yr' in value:
-                                    value = value.replace('/yr', '')
-                                injury_profile['injuries_per_season'] = float(value)
-                            except (ValueError, TypeError):
-                                pass
-                        elif 'risk' in col.lower() and 'game' in col.lower():
-                            try:
-                                value = str(row[col])
-                                if '%' in value:
-                                    value = value.replace('%', '')
-                                injury_profile['injury_risk_per_game'] = float(value)
-                            except (ValueError, TypeError):
-                                pass
-                        elif 'durability' in col.lower():
-                            try:
-                                injury_profile['durability'] = float(row[col])
-                            except (ValueError, TypeError):
-                                pass
-                        elif 'risk' in col.lower() and 'injury' in col.lower():
-                            risk_value = row[col]
-                            if isinstance(risk_value, str):
-                                injury_profile['injury_risk'] = risk_value
-                    injury_profile['has_injury_data'] = True
-                    break
-        
-        return injury_profile
+    # REMOVED: _get_injury_profile_for_ml - now using consolidated player_analyzer.get_injury_profile
 
     def _calculate_legacy_injury_score_for_ml(self, games_missed: float, age: float) -> float:
         """
