@@ -203,7 +203,7 @@ class PlayerAnalyzer:
             Dictionary with injury profile data
         """
         injury_profile = {
-            'injury_risk': 0.5,  # Default moderate risk
+            'injury_risk': 'Medium Risk',  # Default moderate risk as text
             'games_missed': 0,
             'injury_history': [],
             'has_injury_data': False,
@@ -234,49 +234,57 @@ class PlayerAnalyzer:
                 if player in injury_player or injury_player in player:
                     player_found = True
                     
-                    # Extract injury risk - handle different column formats
-                    injury_risk = 0.5  # Default
+                    # Extract all injury metrics needed by scoring engine
+                    injury_risk_text = 'Medium Risk'  # Default
+                    projected_games_missed = 0.0
+                    injuries_per_season = 0.0
+                    injury_risk_per_game = 0.0
+                    durability = 5.0
                     games_missed = 0.0
                     
-                    # Try to find injury risk column
+                    # Extract each field from appropriate columns
                     for col in df.columns:
-                        if 'risk' in col.lower() and 'injury' in col.lower():
+                        if 'projected' in col.lower() and 'missed' in col.lower():
+                            try:
+                                projected_games_missed = float(row[col])
+                            except (ValueError, TypeError):
+                                pass
+                        elif 'risk' in col.lower() and 'injury' in col.lower() and 'season' not in col.lower() and 'game' not in col.lower():
                             risk_value = row[col]
-                            if isinstance(risk_value, str):
-                                if 'high' in risk_value.lower():
-                                    injury_risk = 0.8
-                                elif 'very high' in risk_value.lower():
-                                    injury_risk = 0.9
-                                elif 'medium' in risk_value.lower():
-                                    injury_risk = 0.5
-                                elif 'low' in risk_value.lower():
-                                    injury_risk = 0.3
-                                elif 'very low' in risk_value.lower():
-                                    injury_risk = 0.2
-                            break
-                    
-                    # Try to find games missed column
-                    for col in df.columns:
-                        if 'missed' in col.lower() or 'games' in col.lower():
+                            if isinstance(risk_value, str) and risk_value.strip():
+                                injury_risk_text = risk_value.strip()  # ✅ Store raw text
+                        elif 'injuries' in col.lower() and 'season' in col.lower():
+                            try:
+                                value = str(row[col])
+                                if '/yr' in value:
+                                    value = value.replace('/yr', '')
+                                injuries_per_season = float(value)
+                            except (ValueError, TypeError):
+                                pass
+                        elif 'risk' in col.lower() and 'game' in col.lower():
+                            try:
+                                risk_pct = str(row[col]).replace('%', '').strip()
+                                injury_risk_per_game = float(risk_pct)
+                            except (ValueError, TypeError):
+                                pass
+                        elif 'durability' in col.lower():
+                            try:
+                                durability = float(row[col])
+                            except (ValueError, TypeError):
+                                pass
+                        elif 'missed' in col.lower() or 'games' in col.lower():
                             try:
                                 games_missed = float(row[col])
                             except (ValueError, TypeError):
-                                games_missed = 0.0
-                            break
-                    
-                    # Try to find injury risk percentage
-                    for col in df.columns:
-                        if 'risk' in col.lower() and '%' in str(row[col]):
-                            try:
-                                risk_pct = str(row[col]).replace('%', '').strip()
-                                injury_risk = float(risk_pct) / 100.0
-                            except (ValueError, TypeError):
                                 pass
-                            break
                     
                     injury_profile.update({
-                        'injury_risk': injury_risk,
-                        'games_missed': games_missed,
+                        'injury_risk': injury_risk_text,  # ✅ Text for scoring engine
+                        'projected_games_missed': projected_games_missed,  # ✅ Required by scoring engine
+                        'injuries_per_season': injuries_per_season,        # ✅ Required by scoring engine
+                        'injury_risk_per_game': injury_risk_per_game,      # ✅ Required by scoring engine
+                        'durability': durability,                          # ✅ Required by scoring engine
+                        'games_missed': games_missed,                      # ✅ Legacy field
                         'has_injury_data': True,
                         'injury_history': []  # Could be enhanced with actual history
                     })
