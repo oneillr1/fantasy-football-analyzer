@@ -13,11 +13,12 @@ OPTIMAL_POCKET_TIME = 2.7
 
 # Scoring System Weights (Universal Scoring System)
 SCORING_WEIGHTS = {
-    'volume': 0.20,      # 20% weight for volume metrics
-    'efficiency': 0.30,  # 30% weight for efficiency metrics (CHANGED from 0.35)
-    'explosiveness': 0.25,  # 25% weight for explosiveness metrics
-    'opportunity': 0.20,    # 20% weight for opportunity metrics (CHANGED from 0.15)
-    'negative': -0.05       # -5% weight for negative metrics
+    'volume': 0.15,           # 15% weight for volume metrics (reduced from 0.20)
+    'efficiency': 0.25,       # 25% weight for efficiency metrics (reduced from 0.30)
+    'explosiveness': 0.25,    # 25% weight for explosiveness metrics (maintained)
+    'opportunity': 0.20,      # 20% weight for opportunity metrics (maintained)
+    'advanced_efficiency': 0.10,  # 10% weight for advanced efficiency metrics (NEW)
+    'negative': -0.05         # -5% weight for negative metrics (maintained)
 }
 
 # Profile Score Weights
@@ -64,7 +65,9 @@ KEY_METRICS = {
         # Accuracy metrics
         'POOR', 'DROP',
         # Opportunity metrics
-        'RZ ATT'
+        'RZ ATT',
+        # Advanced efficiency metrics
+        'BREAKAWAY_PCT', 'TD_RATE', 'WEIGHTED_OPP', 'RZ_OPP_SHARE', 'EXPLOSIVE_RATE'
     ],
     'RB': [
         # Efficiency metrics
@@ -76,7 +79,11 @@ KEY_METRICS = {
         # Power/elusiveness metrics
         'BRKTKL', 'TK LOSS', 'TK LOSS YDS',
         # Opportunity metrics
-        'RZ TGT'
+        'RZ TGT',
+        # Advanced efficiency metrics
+        'BREAKAWAY_PCT', 'TD_RATE', 'WEIGHTED_OPP', 'RZ_OPP_SHARE', 'EXPLOSIVE_RATE',
+        # Contact efficiency metrics
+        'YBC_PER_ATT', 'YAC_PER_ATT', 'CONTACT_EFF_RATIO'
     ],
     'WR': [
         # Efficiency metrics
@@ -88,7 +95,9 @@ KEY_METRICS = {
         # Opportunity metrics
         '% TM', 'CATCHABLE', 'RZ TGT',
         # Playmaking metrics
-        'BRKTKL', 'DROP'
+        'BRKTKL', 'DROP',
+        # Advanced efficiency metrics
+        'BREAKAWAY_PCT', 'TD_RATE', 'WEIGHTED_OPP', 'RZ_OPP_SHARE', 'EXPLOSIVE_RATE'
     ],
     'TE': [
         # Efficiency metrics
@@ -100,7 +109,9 @@ KEY_METRICS = {
         # Opportunity metrics
         '% TM', 'CATCHABLE', 'RZ TGT',
         # Playmaking metrics
-        'BRKTKL', 'DROP'
+        'BRKTKL', 'DROP',
+        # Advanced efficiency metrics
+        'BREAKAWAY_PCT', 'TD_RATE', 'WEIGHTED_OPP', 'RZ_OPP_SHARE', 'EXPLOSIVE_RATE', 'LONG_TD_RATE'
     ]
 }
 
@@ -174,7 +185,18 @@ METRIC_DESCRIPTIONS = {
     '30+ YDS': '30+ Yard Receptions - Deep plays',
     '40+ YDS': '40+ Yard Receptions - Very deep plays',
     '50+ YDS': '50+ Yard Receptions - Extremely deep plays',
-    'LNG': 'Longest Reception - Best single play'
+    'LNG': 'Longest Reception - Best single play',
+    
+    # Advanced Efficiency Metrics
+    'BREAKAWAY_PCT': 'Breakaway Percentage - (10+ YDS)/ATT for RB, (20+ YDS)/REC for WR/TE - Separates big-play players from grinders',
+    'TD_RATE': 'Touchdown Rate - TDs per opportunity - Role in scoring plays',
+    'WEIGHTED_OPP': 'Weighted Opportunities - ATT + (1.5 × TGT) for RB - Values receiving targets more than carries',
+    'RZ_OPP_SHARE': 'Red Zone Opportunity Share - RZ_ATT/ATT or RZ_TGT/TGT - Normalized opportunity metrics',
+    'EXPLOSIVE_RATE': 'Explosive Play Rate - (20+ yard plays) / total touches - Big-play potential',
+
+    'YBC_PER_ATT': 'Yards Before Contact per Attempt - OL blocking quality',
+    'YAC_PER_ATT': 'Yards After Contact per Attempt - RB elusiveness and power',
+    'CONTACT_EFF_RATIO': 'Contact Efficiency Ratio - YACON / YBCON - Separates OL quality from RB skill'
 }
 
 # Metric Categories for Universal Scoring
@@ -183,7 +205,8 @@ METRIC_CATEGORIES = {
     'efficiency': ['Y/A', 'Y/R', 'PCT', 'RTG', 'YAC/R', 'YACON/R', 'YACON/ATT'],
     'explosiveness': ['10+ YDS', '20+ YDS', '40+ YDS', 'BRKTKL', 'AIR/A'],
     'opportunity': ['TGT', 'RZ TGT', '% TM', 'CATCHABLE', 'PKT TIME'],
-    'negative': ['SACK', 'INT', 'FUM', 'DROP']
+    'negative': ['SACK', 'INT', 'FUM', 'DROP'],
+    'advanced_efficiency': ['BREAKAWAY_PCT', 'TD_RATE', 'CONTACT_EFF_RATIO', 'EXPLOSIVE_RATE', 'YBC_PER_ATT', 'YAC_PER_ATT']
 }
 
 # File Naming Patterns

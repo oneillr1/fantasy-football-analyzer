@@ -12,6 +12,7 @@ from config.constants import (
     SCORING_WEIGHTS, PROFILE_WEIGHTS, METRIC_CATEGORIES,
     KEY_METRICS, DEFAULT_SCORE, POSITIONS
 )
+from modules.advanced_features import AdvancedFeatureEngine
 
 
 class ScoringEngine:
@@ -35,6 +36,7 @@ class ScoringEngine:
         """
         self.data_loader = data_loader
         self.player_analyzer = None  # Will be set after initialization
+        self.advanced_feature_engine = AdvancedFeatureEngine(data_loader)  # NEW: Advanced features
         
         # Metric descriptions for better analysis
         self.metric_descriptions = {
@@ -187,6 +189,14 @@ class ScoringEngine:
         if position and self.data_loader.advanced_data and position in self.data_loader.advanced_data:
             return self._normalize_metric_position_specific(raw_value, metric_name, category, position)
         else:
+            # Log fallback reason
+            if not position:
+                print(f"UNIVERSAL FALLBACK: No position provided for metric '{metric_name}' (category: {category})")
+            elif not self.data_loader.advanced_data:
+                print(f"UNIVERSAL FALLBACK: No advanced data available for metric '{metric_name}' (position: {position}, category: {category})")
+            elif position not in self.data_loader.advanced_data:
+                print(f"UNIVERSAL FALLBACK: Position '{position}' not found in advanced data for metric '{metric_name}' (category: {category})")
+            
             # Fallback to universal ranges
             return self._normalize_metric_universal_fallback(raw_value, metric_name, category)
 
@@ -206,12 +216,19 @@ class ScoringEngine:
         # Get all players for this position in the current year
         current_year = max(self.data_loader.years)
         if position not in self.data_loader.advanced_data or current_year not in self.data_loader.advanced_data[position]:
+            if position not in self.data_loader.advanced_data:
+                print(f"UNIVERSAL FALLBACK: Position '{position}' not in advanced data for metric '{metric_name}' (category: {category})")
+            else:
+                print(f"UNIVERSAL FALLBACK: Year {current_year} not found for position '{position}' in advanced data for metric '{metric_name}' (category: {category})")
             return self._normalize_metric_universal_fallback(raw_value, metric_name, category)
         
         df = self.data_loader.advanced_data[position][current_year]
         
         # Get all values for this metric in this position
         if metric_name not in df.columns:
+            available_columns = list(df.columns)[:10]  # Show first 10 columns for debugging
+            print(f"UNIVERSAL FALLBACK: Metric '{metric_name}' not found in columns for position '{position}' (category: {category})")
+            print(f"  Available columns (first 10): {available_columns}")
             return self._normalize_metric_universal_fallback(raw_value, metric_name, category)
         
         # Filter out NaN values and convert to float
@@ -227,6 +244,8 @@ class ScoringEngine:
                 continue
         
         if len(float_values) < 5:  # Need minimum sample size
+            print(f"UNIVERSAL FALLBACK: Insufficient sample size for metric '{metric_name}' (position: {position}, category: {category})")
+            print(f"  Valid values: {len(float_values)}, Total values: {len(position_values)}")
             return self._normalize_metric_universal_fallback(raw_value, metric_name, category)
         
         # Calculate position-specific min and max
@@ -235,6 +254,8 @@ class ScoringEngine:
         
         # Handle edge cases
         if min_val == max_val:
+            print(f"UNIVERSAL FALLBACK: No variance in metric '{metric_name}' for position '{position}' (category: {category})")
+            print(f"  All values are {min_val}")
             return 5.0  # Neutral score if no variance
         
         # Apply metric-specific weighting
@@ -485,6 +506,12 @@ class ScoringEngine:
         # Get range for this metric and category
         ranges = normalization_ranges.get(category, {})
         metric_range = ranges.get(metric_name, (0, 100))  # Default range
+        
+        # Log when using fallback ranges
+        if metric_name not in ranges.get(category, {}):
+            print(f"UNIVERSAL FALLBACK: Using default range (0, 100) for metric '{metric_name}' (category: {category})")
+        else:
+            print(f"UNIVERSAL FALLBACK: Using fallback range {metric_range} for metric '{metric_name}' (category: {category})")
         
         min_val, max_val = metric_range
         
@@ -1303,4 +1330,132 @@ class ScoringEngine:
         normalized_score = 5.0 + (z_score * 2.5)
         normalized_score = max(0.0, min(10.0, normalized_score))
         
-        return z_score, normalized_score 
+        return z_score, normalized_score
+    
+    def calculate_advanced_efficiency_score(self, player_row: pd.Series, position: str) -> Tuple[float, Dict]:
+        """
+        Calculate advanced efficiency score using the new advanced features.
+        
+        Args:
+            player_row: Player's advanced metrics data
+            position: Player position (QB, RB, WR, TE)
+            
+        Returns:
+            Tuple of (score, breakdown_dict)
+        """
+        try:
+            # Calculate all advanced features
+            advanced_features = self.advanced_feature_engine.calculate_all_features(player_row, position)
+            feature_names = self.advanced_feature_engine.get_feature_names(position)
+            
+            if not advanced_features or len(advanced_features) != len(feature_names):
+                return DEFAULT_SCORE, {}
+            
+            # Create a breakdown dictionary
+            breakdown = {}
+            total_score = 0.0
+            valid_features = 0
+            
+            for i, (feature_name, feature_value) in enumerate(zip(feature_names, advanced_features)):
+                if not np.isnan(feature_value) and not np.isinf(feature_value):
+                    # Normalize feature to 0-10 scale based on position-specific ranges
+                    normalized_score = self._normalize_advanced_feature(feature_value, feature_name, position)
+                    
+                    breakdown[feature_name] = {
+                        'raw_value': feature_value,
+                        'normalized_score': normalized_score
+                    }
+                    
+                    total_score += normalized_score
+                    valid_features += 1
+            
+            # Calculate average score
+            final_score = total_score / valid_features if valid_features > 0 else DEFAULT_SCORE
+            
+            breakdown['final_score'] = final_score
+            breakdown['valid_features_count'] = valid_features
+            
+            return final_score, breakdown
+            
+        except Exception as e:
+            print(f"Error calculating advanced efficiency score: {e}")
+            return DEFAULT_SCORE, {}
+    
+    def _normalize_advanced_feature(self, value: float, feature_name: str, position: str) -> float:
+        """
+        Normalize an advanced feature to 0-10 scale based on position-specific ranges.
+        
+        Args:
+            value: Raw feature value
+            feature_name: Name of the feature
+            position: Player position
+            
+        Returns:
+            Normalized score (0-10)
+        """
+        try:
+            # Position-specific normalization ranges
+            normalization_ranges = {
+                'breakaway_percentage': {
+                    'QB': (0.0, 0.15),    # 0-15% breakaway rate
+                    'RB': (0.0, 0.25),    # 0-25% breakaway rate
+                    'WR': (0.0, 0.20),    # 0-20% breakaway rate
+                    'TE': (0.0, 0.15)     # 0-15% breakaway rate
+                },
+                'td_rate': {
+                    'QB': (0.0, 0.08),    # 0-8% TD rate
+                    'RB': (0.0, 0.12),    # 0-12% TD rate
+                    'WR': (0.0, 0.15),    # 0-15% TD rate
+                    'TE': (0.0, 0.12)     # 0-12% TD rate
+                },
+                'weighted_opportunities': {
+                    'QB': (0.0, 600.0),   # 0-600 attempts
+                    'RB': (0.0, 400.0),   # 0-400 weighted opportunities
+                    'WR': (0.0, 200.0),   # 0-200 targets
+                    'TE': (0.0, 150.0)    # 0-150 targets
+                },
+                'redzone_opportunity_share': {
+                    'QB': (0.0, 0.25),    # 0-25% red zone share
+                    'RB': (0.0, 0.30),    # 0-30% red zone share
+                    'WR': (0.0, 0.40),    # 0-40% red zone share
+                    'TE': (0.0, 0.35)     # 0-35% red zone share
+                },
+                'explosive_play_rate': {
+                    'QB': (0.0, 0.12),    # 0-12% explosive rate
+                    'RB': (0.0, 0.15),    # 0-15% explosive rate
+                    'WR': (0.0, 0.20),    # 0-20% explosive rate
+                    'TE': (0.0, 0.15)     # 0-15% explosive rate
+                },
+
+                'ybc_per_att': {
+                    'RB': (0.0, 4.0)      # 0-4 yards before contact per attempt
+                },
+                'yac_per_att': {
+                    'RB': (0.0, 3.0)      # 0-3 yards after contact per attempt
+                },
+                'contact_efficiency_ratio': {
+                    'RB': (0.0, 2.0)      # 0-2 contact efficiency ratio
+                }
+            }
+            
+            # Get the normalization range for this feature and position
+            if feature_name in normalization_ranges and position in normalization_ranges[feature_name]:
+                min_val, max_val = normalization_ranges[feature_name][position]
+                
+                # Clamp value to range
+                clamped_value = max(min_val, min(max_val, value))
+                
+                # Normalize to 0-10 scale
+                if max_val > min_val:
+                    normalized = ((clamped_value - min_val) / (max_val - min_val)) * 10.0
+                else:
+                    normalized = 5.0  # Neutral score if no range
+                
+                return max(0.0, min(10.0, normalized))
+            else:
+                # Default normalization for unknown features
+                return max(0.0, min(10.0, value * 10.0))  # Assume 0-1 range
+                
+        except Exception as e:
+            print(f"Error normalizing advanced feature {feature_name}: {e}")
+            return 5.0  # Neutral score on error 

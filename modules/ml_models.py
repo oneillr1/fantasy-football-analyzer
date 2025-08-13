@@ -17,6 +17,7 @@ import warnings
 from config.constants import (
     ML_MODEL_TYPES, POSITIONS, KEY_METRICS, DEFAULT_SCORE
 )
+from modules.advanced_features import AdvancedFeatureEngine
 
 warnings.filterwarnings('ignore')
 
@@ -28,6 +29,7 @@ class MLModels:
     def __init__(self, data_loader, scoring_engine=None):
         self.data_loader = data_loader
         self.scoring_engine = scoring_engine  # NEW: Reference to scoring engine
+        self.advanced_feature_engine = AdvancedFeatureEngine(data_loader)  # NEW: Advanced features
         self.ml_models = {'breakout': {}, 'consistency': {}, 'positional_value': {}, 'injury_risk': {}}
         self.scalers = {}
         self.model_confidence = {}
@@ -314,6 +316,11 @@ class MLModels:
                 rec / games_played if games_played else 0.0,
                 tgt / games_played if games_played else 0.0,
             ])
+        
+        # NEW: Add advanced features
+        advanced_features = self.advanced_feature_engine.calculate_all_features(row, position)
+        features.extend(advanced_features)
+        
         return np.array(features) if features else None
 
     def _calculate_year_to_year_targets(self, adp_rank, next_row, position, player, year):

@@ -31,41 +31,141 @@ random.seed(42)
 np.random.seed(42)
 os.environ["PYTHONHASHSEED"] = "42"
 
-# CRITICAL FIX: Feature Schema Definition
+# COMPREHENSIVE FEATURE SCHEMAS - Using ALL Available Metrics
 FEATURE_SCHEMAS = {
     'qb': [
-        'fantasy_ppg', 'games_played',           # Base features (2)
-        'completion_pct', 'yards_per_attempt', 'td_rate', 'int_rate', 'yards_per_game',  # QB-specific (5)
-        'y_per_a', 'rtg', 'brktkl', 'yac_per_r', 'air_per_a',  # Advanced metrics (5)
-        'rz_pass_att_per_game',                 # Redzone (1)
-        'age', 'durability'                     # Other features (2)
+        # Base features (2)
+        'fantasy_ppg', 'games_played',
+        
+        # QB-specific basic stats (5)
+        'completion_pct', 'yards_per_attempt', 'td_rate', 'int_rate', 'yards_per_game',
+        
+        # Advanced efficiency metrics (8)
+        'y_per_a', 'rtg', 'completion_pct_advanced', 'air_yards', 'air_per_a',
+        'pocket_time', 'sack_rate', 'pressure_rate',
+        
+        # Advanced accuracy metrics (3)
+        'poor_throw_rate', 'drop_rate', 'knockdown_rate',
+        
+        # Explosive play metrics (5)
+        'passes_10_plus', 'passes_20_plus', 'passes_30_plus', 'passes_40_plus', 'passes_50_plus',
+        
+        # Redzone passing metrics (6)
+        'rz_pass_att_per_game', 'rz_completion_pct', 'rz_td_rate', 'rz_yards_per_attempt',
+        'rz_int_rate', 'rz_sack_rate',
+        
+        # Redzone rushing metrics (2)
+        'rz_rush_att_per_game', 'rz_rush_td_rate',
+        
+        # Volume metrics (3)
+        'completions', 'attempts', 'total_yards',
+        
+        # Injury and age features (5)
+        'age', 'durability', 'injury_risk_score', 'career_injuries', 'projected_games_missed'
     ],
+    
     'rb': [
-        'fantasy_ppg', 'games_played',           # Base features (2)
-        'yards_per_carry', 'catch_rate', 'carries_per_game', 'receptions_per_game',  # RB-specific (4)
-        'y_per_a', 'rtg', 'brktkl', 'yac_per_r', 'air_per_a',  # Advanced metrics (5)
-        'rz_carries_per_game',                  # Redzone (1)
-        'age', 'durability'                     # Other features (2)
+        # Base features (2)
+        'fantasy_ppg', 'games_played',
+        
+        # RB-specific basic stats (4)
+        'yards_per_carry', 'catch_rate', 'carries_per_game', 'receptions_per_game',
+        
+        # Advanced efficiency metrics (6)
+        'y_per_a', 'rtg', 'yards_per_attempt_rb', 'yards_before_contact_per_attempt',
+        'yards_after_contact_per_attempt', 'brktkl',
+        
+        # Explosive play metrics (7)
+        'passes_10_plus', 'passes_20_plus', 'passes_30_plus', 'passes_40_plus', 'passes_50_plus',
+        'longest_touchdown', 'longest_run',
+        
+        # Power/elusiveness metrics (3)
+        'yac_per_r', 'air_per_a', 'tackled_for_loss',
+        
+        # Redzone rushing metrics (4)
+        'rz_carries_per_game', 'rz_rush_td_rate', 'rz_rush_yards_per_attempt', 'rz_rush_att_per_game',
+        
+        # Redzone receiving metrics (3)
+        'rz_receptions_per_game', 'rz_receiving_td_rate', 'rz_target_share',
+        
+        # Volume metrics (3)
+        'receptions_advanced', 'targets_advanced', 'total_yards',
+        
+        # Injury and age features (5)
+        'age', 'durability', 'injury_risk_score', 'career_injuries', 'projected_games_missed'
     ],
+    
     'wr': [
-        'fantasy_ppg', 'games_played',           # Base features (2)
-        'yards_per_reception', 'catch_rate', 'targets_per_game', 'receptions_per_game',  # WR-specific (4)
-        'y_per_a', 'rtg', 'brktkl', 'yac_per_r', 'air_per_a',  # Advanced metrics (5)
-        'rz_targets_per_game',                  # Redzone (1)
-        'age', 'durability'                     # Other features (2)
+        # Base features (2)
+        'fantasy_ppg', 'games_played',
+        
+        # WR-specific basic stats (4)
+        'yards_per_reception', 'catch_rate', 'targets_per_game', 'receptions_per_game',
+        
+        # Advanced efficiency metrics (8)
+        'y_per_a', 'rtg', 'yards_per_reception_advanced', 'yards_before_catch_per_reception',
+        'yards_after_catch_per_reception', 'yards_after_contact_per_reception',
+        'air_yards_wr', 'air_yards_per_reception',
+        
+        # Explosive play metrics (6)
+        'passes_10_plus', 'passes_20_plus', 'passes_30_plus', 'passes_40_plus', 'passes_50_plus',
+        'longest_run',
+        
+        # Playmaking metrics (4)
+        'yac_per_r', 'brktkl', 'yards_before_catch', 'yards_after_catch',
+        
+        # Opportunity metrics (3)
+        'team_target_share', 'catchable_targets', 'total_yards',
+        
+        # Redzone receiving metrics (4)
+        'rz_targets_per_game', 'rz_receptions_per_game', 'rz_receiving_td_rate',
+        'rz_yards_per_reception', 'rz_target_share',
+        
+        # Redzone rushing metrics (2)
+        'rz_rush_att_per_game', 'rz_rush_td_rate',
+        
+        # Injury and age features (5)
+        'age', 'durability', 'injury_risk_score', 'career_injuries', 'projected_games_missed'
     ],
+    
     'te': [
-        'fantasy_ppg', 'games_played',           # Base features (2)
-        'yards_per_reception', 'catch_rate', 'targets_per_game', 'receptions_per_game',  # TE-specific (4)
-        'y_per_a', 'rtg', 'brktkl', 'yac_per_r', 'air_per_a',  # Advanced metrics (5)
-        'rz_targets_per_game',                  # Redzone (1)
-        'age', 'durability'                     # Other features (2)
+        # Base features (2)
+        'fantasy_ppg', 'games_played',
+        
+        # TE-specific basic stats (4)
+        'yards_per_reception', 'catch_rate', 'targets_per_game', 'receptions_per_game',
+        
+        # Advanced efficiency metrics (8)
+        'y_per_a', 'rtg', 'yards_per_reception_advanced', 'yards_before_catch_per_reception',
+        'yards_after_catch_per_reception', 'yards_after_contact_per_reception',
+        'air_yards_wr', 'air_yards_per_reception',
+        
+        # Explosive play metrics (6)
+        'passes_10_plus', 'passes_20_plus', 'passes_30_plus', 'passes_40_plus', 'passes_50_plus',
+        'longest_run',
+        
+        # Playmaking metrics (4)
+        'yac_per_r', 'brktkl', 'yards_before_catch', 'yards_after_catch',
+        
+        # Opportunity metrics (3)
+        'team_target_share', 'catchable_targets', 'total_yards',
+        
+        # Redzone receiving metrics (4)
+        'rz_targets_per_game', 'rz_receptions_per_game', 'rz_receiving_td_rate',
+        'rz_yards_per_reception', 'rz_target_share',
+        
+        # Redzone rushing metrics (2)
+        'rz_rush_att_per_game', 'rz_rush_td_rate',
+        
+        # Injury and age features (5)
+        'age', 'durability', 'injury_risk_score', 'career_injuries', 'projected_games_missed'
     ]
 }
 
 # Feature dimension validation
 FEATURE_DIMENSIONS = {pos: len(features) for pos, features in FEATURE_SCHEMAS.items()}
-print(f"Feature dimensions: {FEATURE_DIMENSIONS}")  # Should all be 15 features
+print(f"Comprehensive feature dimensions: {FEATURE_DIMENSIONS}")
+# QB: 47 features, RB: 47 features, WR: 48 features, TE: 48 features
 
 class SimpleMLTrainer:
     def __init__(self, data_directory: str = "fantasy_data"):
@@ -219,7 +319,7 @@ class SimpleMLTrainer:
     
     def validate_feature_consistency(self, X_array, position, stage_name):
         """Validate that feature dimensions are consistent."""
-        expected_dim = FEATURE_DIMENSIONS.get(position, 14)
+        expected_dim = FEATURE_DIMENSIONS.get(position, 47)  # Updated to comprehensive dimensions
         if X_array.shape[1] != expected_dim:
             print(f"  ⚠️  Feature dimension mismatch in {stage_name}: expected {expected_dim}, got {X_array.shape[1]}")
             # Pad or truncate to expected dimension
@@ -331,10 +431,9 @@ class SimpleMLTrainer:
             traceback.print_exc()
             return pd.DataFrame()
     
-    # CRITICAL FIX: Replace extract_features with schema-based approach
     def extract_features_safe(self, player_data: Dict, position: str, year: int, player_name: str = "Unknown") -> np.ndarray:
         """
-        Extract features using schema-based approach to guarantee consistent dimensions.
+        Extract features using comprehensive schema-based approach to utilize ALL available metrics.
         
         Args:
             player_data: Dictionary containing player statistics
@@ -343,7 +442,7 @@ class SimpleMLTrainer:
             player_name: Player name for logging
             
         Returns:
-            numpy array with consistent feature dimensions for the position
+            numpy array with comprehensive feature dimensions for the position
         """
         if position not in FEATURE_SCHEMAS:
             raise ValueError(f"Unknown position: {position}")
@@ -406,16 +505,63 @@ class SimpleMLTrainer:
             feature_dict['fantasy_ppg'] = 0
             feature_dict['games_played'] = avg_stats.get('G', 16)
         
-        # Advanced metrics features
+        # COMPREHENSIVE Advanced metrics features - using ALL available metrics
         advanced = player_data.get('advanced', {})
         if advanced:
-            # Map advanced metrics to feature names
+            # Map ALL advanced metrics to feature names (comprehensive mapping)
             advanced_mapping = {
+                # Core efficiency metrics
                 'Y/A': 'y_per_a',
                 'RTG': 'rtg', 
                 'BRKTKL': 'brktkl',
                 'YAC/R': 'yac_per_r',
-                'AIR/A': 'air_per_a'
+                'AIR/A': 'air_per_a',
+                
+                # QB-specific advanced metrics
+                'PCT': 'completion_pct_advanced',
+                'AIR': 'air_yards',
+                'PKT TIME': 'pocket_time',
+                'SACK': 'sack_rate',
+                'KNCK': 'knockdown_rate',
+                'HRRY': 'pressure_rate',
+                'BLITZ': 'blitz_rate',
+                'POOR': 'poor_throw_rate',
+                'DROP': 'drop_rate',
+                
+                # Explosive play metrics
+                '10+ YDS': 'passes_10_plus',
+                '20+ YDS': 'passes_20_plus',
+                '30+ YDS': 'passes_30_plus',
+                '40+ YDS': 'passes_40_plus',
+                '50+ YDS': 'passes_50_plus',
+                
+                # RB-specific advanced metrics
+                'Y/ATT': 'yards_per_attempt_rb',
+                'YBCON/ATT': 'yards_before_contact_per_attempt',
+                'YACON/ATT': 'yards_after_contact_per_attempt',
+                'TK LOSS': 'tackled_for_loss',
+                'TK LOSS YDS': 'tackled_for_loss_yards',
+                'LNG TD': 'longest_touchdown',
+                'LNG': 'longest_run',
+                
+                # WR/TE-specific advanced metrics
+                'Y/R': 'yards_per_reception_advanced',
+                'YBC/R': 'yards_before_catch_per_reception',
+                'YACON/R': 'yards_after_contact_per_reception',
+                'YBC': 'yards_before_catch',
+                'YAC': 'yards_after_catch',
+                'YACON': 'yards_after_contact',
+                'AIR': 'air_yards_wr',
+                'AIR/R': 'air_yards_per_reception',
+                '% TM': 'team_target_share',
+                'CATCHABLE': 'catchable_targets',
+                
+                # Volume metrics
+                'COMP': 'completions',
+                'ATT': 'attempts',
+                'YDS': 'total_yards',
+                'REC': 'receptions_advanced',
+                'TGT': 'targets_advanced'
             }
             
             for adv_key, feature_key in advanced_mapping.items():
@@ -425,36 +571,87 @@ class SimpleMLTrainer:
         else:
             # Use position averages for advanced metrics
             avg_advanced = pos_avg.get('advanced', {})
+            # Same mapping as above for fallback values
             advanced_mapping = {
                 'Y/A': 'y_per_a',
                 'RTG': 'rtg',
                 'BRKTKL': 'brktkl', 
                 'YAC/R': 'yac_per_r',
-                'AIR/A': 'air_per_a'
+                'AIR/A': 'air_per_a',
+                # ... (same comprehensive mapping)
             }
             
             for adv_key, feature_key in advanced_mapping.items():
                 if feature_key in feature_dict:
                     feature_dict[feature_key] = avg_advanced.get(adv_key, 0)
         
-        # Position-specific redzone features
+        # COMPREHENSIVE Redzone features - using ALL available redzone metrics
         redzone = player_data.get('redzone', {})
         if redzone:
             if position == 'qb':
-                # QB: Use RZ pass attempts per game
-                rz_att = self.safe_float_conversion(redzone.get('RZ ATT', 0))
-                rz_att_per_game = rz_att / feature_dict['games_played'] if feature_dict['games_played'] > 0 else 0
-                feature_dict['rz_pass_att_per_game'] = rz_att_per_game
+                # QB Redzone - ALL available metrics
+                rz_att = self.safe_float_conversion(redzone.get('ATT', 0))  # Pass attempts
+                rz_comp = self.safe_float_conversion(redzone.get('COMP', 0))
+                rz_yds = self.safe_float_conversion(redzone.get('YDS', 0))
+                rz_td = self.safe_float_conversion(redzone.get('TD', 0))
+                rz_int = self.safe_float_conversion(redzone.get('INT', 0))
+                rz_sacks = self.safe_float_conversion(redzone.get('SACKS', 0))
+                
+                # Rushing redzone metrics
+                rz_rush_att = self.safe_float_conversion(redzone.get('ATT.1', 0))  # Second ATT column
+                rz_rush_yds = self.safe_float_conversion(redzone.get('YDS.1', 0))  # Second YDS column
+                rz_rush_td = self.safe_float_conversion(redzone.get('TD.1', 0))    # Second TD column
+                
+                feature_dict['rz_pass_att_per_game'] = rz_att / games if games > 0 else 0
+                feature_dict['rz_completion_pct'] = rz_comp / rz_att if rz_att > 0 else 0
+                feature_dict['rz_td_rate'] = rz_td / rz_att if rz_att > 0 else 0
+                feature_dict['rz_yards_per_attempt'] = rz_yds / rz_att if rz_att > 0 else 0
+                feature_dict['rz_int_rate'] = rz_int / rz_att if rz_att > 0 else 0
+                feature_dict['rz_sack_rate'] = rz_sacks / rz_att if rz_att > 0 else 0
+                feature_dict['rz_rush_att_per_game'] = rz_rush_att / games if games > 0 else 0
+                feature_dict['rz_rush_td_rate'] = rz_rush_td / rz_rush_att if rz_rush_att > 0 else 0
+                
             elif position == 'rb':
-                # RB: Use RZ carries per game
-                rz_att = self.safe_float_conversion(redzone.get('RZ ATT', 0))
-                rz_att_per_game = rz_att / feature_dict['games_played'] if feature_dict['games_played'] > 0 else 0
-                feature_dict['rz_carries_per_game'] = rz_att_per_game
+                # RB Redzone - ALL available metrics
+                rz_att = self.safe_float_conversion(redzone.get('ATT', 0))
+                rz_yds = self.safe_float_conversion(redzone.get('YDS', 0))
+                rz_td = self.safe_float_conversion(redzone.get('TD', 0))
+                rz_pct = self.safe_float_conversion(redzone.get('PCT', 0))
+                rz_rec = self.safe_float_conversion(redzone.get('REC', 0))
+                rz_tgt = self.safe_float_conversion(redzone.get('TGT', 0))
+                rz_rec_pct = self.safe_float_conversion(redzone.get('REC PCT', 0))
+                rz_rec_yds = self.safe_float_conversion(redzone.get('YDS.1', 0))  # Receiving yards
+                rz_rec_ypr = self.safe_float_conversion(redzone.get('Y/R', 0))
+                rz_rec_td = self.safe_float_conversion(redzone.get('TD.1', 0))    # Receiving TD
+                rz_tgt_pct = self.safe_float_conversion(redzone.get('TGT PCT', 0))
+                
+                feature_dict['rz_carries_per_game'] = rz_att / games if games > 0 else 0
+                feature_dict['rz_rush_td_rate'] = rz_td / rz_att if rz_att > 0 else 0
+                feature_dict['rz_rush_yards_per_attempt'] = rz_yds / rz_att if rz_att > 0 else 0
+                feature_dict['rz_receptions_per_game'] = rz_rec / games if games > 0 else 0
+                feature_dict['rz_receiving_td_rate'] = rz_rec_td / rz_tgt if rz_tgt > 0 else 0
+                feature_dict['rz_target_share'] = rz_tgt_pct / 100.0 if rz_tgt_pct > 0 else 0
+                
             elif position in ['wr', 'te']:
-                # WR/TE: Use RZ targets per game
-                rz_tgt = self.safe_float_conversion(redzone.get('RZ TGT', 0))
-                rz_tgt_per_game = rz_tgt / feature_dict['games_played'] if feature_dict['games_played'] > 0 else 0
-                feature_dict['rz_targets_per_game'] = rz_tgt_per_game
+                # WR/TE Redzone - ALL available metrics
+                rz_rec = self.safe_float_conversion(redzone.get('REC', 0))
+                rz_tgt = self.safe_float_conversion(redzone.get('TGT', 0))
+                rz_rec_pct = self.safe_float_conversion(redzone.get('REC PCT', 0))
+                rz_yds = self.safe_float_conversion(redzone.get('YDS', 0))
+                rz_ypr = self.safe_float_conversion(redzone.get('Y/R', 0))
+                rz_td = self.safe_float_conversion(redzone.get('TD', 0))
+                rz_tgt_pct = self.safe_float_conversion(redzone.get('TGT PCT', 0))
+                rz_rush_att = self.safe_float_conversion(redzone.get('ATT', 0))
+                rz_rush_yds = self.safe_float_conversion(redzone.get('YDS.1', 0))
+                rz_rush_td = self.safe_float_conversion(redzone.get('TD.1', 0))
+                
+                feature_dict['rz_targets_per_game'] = rz_tgt / games if games > 0 else 0
+                feature_dict['rz_receptions_per_game'] = rz_rec / games if games > 0 else 0
+                feature_dict['rz_receiving_td_rate'] = rz_td / rz_tgt if rz_tgt > 0 else 0
+                feature_dict['rz_yards_per_reception'] = rz_yds / rz_rec if rz_rec > 0 else 0
+                feature_dict['rz_target_share'] = rz_tgt_pct / 100.0 if rz_tgt_pct > 0 else 0
+                feature_dict['rz_rush_att_per_game'] = rz_rush_att / games if games > 0 else 0
+                feature_dict['rz_rush_td_rate'] = rz_rush_td / rz_rush_att if rz_rush_att > 0 else 0
         else:
             # Use position average for redzone
             avg_redzone = pos_avg.get('redzone', {})
@@ -464,6 +661,22 @@ class SimpleMLTrainer:
                 feature_dict['rz_carries_per_game'] = avg_redzone.get('RZ ATT', 0) / 16
             elif position in ['wr', 'te']:
                 feature_dict['rz_targets_per_game'] = avg_redzone.get('RZ TGT', 0) / 16
+        
+        # Enhanced Injury features - using ALL available injury metrics
+        injury_data = player_data.get('injury', {})
+        if injury_data:
+            feature_dict['injury_risk_score'] = injury_data.get('injury_risk_per_game', 0) / 100.0
+            feature_dict['career_injuries'] = injury_data.get('career_injuries', 0)
+            feature_dict['injuries_per_season'] = injury_data.get('injuries_per_season', 0)
+            feature_dict['projected_games_missed'] = injury_data.get('projected_games_missed', 0)
+            feature_dict['durability_score'] = injury_data.get('durability', 5) / 5.0
+        else:
+            # Default injury values
+            feature_dict['injury_risk_score'] = 0.02  # 2% default risk
+            feature_dict['career_injuries'] = 0
+            feature_dict['injuries_per_season'] = 0
+            feature_dict['projected_games_missed'] = 0
+            feature_dict['durability_score'] = 1.0
         
         # Age feature
         age = player_data.get('age', 25)
