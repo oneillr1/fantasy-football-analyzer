@@ -1089,6 +1089,99 @@ class SimpleMLTrainer:
         
         return FEATURE_SCHEMAS[position].copy()
     
+    def analyze_feature_importance(self, position: str) -> pd.DataFrame:
+        """
+        Analyze feature importance for a trained model.
+        
+        Args:
+            position: Position to analyze ('qb', 'rb', 'wr', 'te')
+            
+        Returns:
+            DataFrame with feature names and importance scores, sorted by importance
+        """
+        if position not in self.models:
+            print(f"❌ No trained model found for {position}")
+            return pd.DataFrame()
+        
+        if position not in self.feature_names:
+            print(f"❌ No feature names found for {position}")
+            return pd.DataFrame()
+        
+        # Get feature importances from the trained model
+        importances = self.models[position].feature_importances_
+        feature_names = self.feature_names[position]
+        
+        # Create DataFrame with feature names and importance scores
+        feature_df = pd.DataFrame({
+            'feature': feature_names,
+            'importance': importances
+        }).sort_values('importance', ascending=False)
+        
+        # Print top 10 features
+        print(f"\nTop 10 {position.upper()} Features:")
+        print("-" * 50)
+        for i, (_, row) in enumerate(feature_df.head(10).iterrows(), 1):
+            print(f"{i:2d}. {row['feature']:<35} {row['importance']:.4f}")
+        
+        # Print bottom 10 features (least important)
+        print(f"\nBottom 10 {position.upper()} Features:")
+        print("-" * 50)
+        for i, (_, row) in enumerate(feature_df.tail(10).iterrows(), 1):
+            print(f"{i:2d}. {row['feature']:<35} {row['importance']:.4f}")
+        
+        # Calculate importance statistics
+        total_importance = feature_df['importance'].sum()
+        top_10_importance = feature_df.head(10)['importance'].sum()
+        top_10_percentage = (top_10_importance / total_importance) * 100
+        
+        print(f"\nFeature Importance Summary for {position.upper()}:")
+        print(f"  Total features: {len(feature_df)}")
+        print(f"  Top 10 features account for: {top_10_percentage:.1f}% of total importance")
+        print(f"  Most important feature: {feature_df.iloc[0]['feature']} ({feature_df.iloc[0]['importance']:.4f})")
+        print(f"  Least important feature: {feature_df.iloc[-1]['feature']} ({feature_df.iloc[-1]['importance']:.4f})")
+        
+        return feature_df
+    
+    def analyze_all_feature_importance(self) -> Dict[str, pd.DataFrame]:
+        """
+        Analyze feature importance for all trained models.
+        
+        Returns:
+            Dictionary with position as key and feature importance DataFrame as value
+        """
+        print("\n" + "="*60)
+        print("FEATURE IMPORTANCE ANALYSIS")
+        print("="*60)
+        
+        all_importance = {}
+        
+        for position in ['qb', 'rb', 'wr', 'te']:
+            if position in self.models:
+                print(f"\nAnalyzing {position.upper()} feature importance...")
+                importance_df = self.analyze_feature_importance(position)
+                if not importance_df.empty:
+                    all_importance[position] = importance_df
+                    
+                    # Save to CSV
+                    output_file = f"feature_importance_{position}.csv"
+                    importance_df.to_csv(output_file, index=False)
+                    print(f"  ✓ Saved {position.upper()} feature importance to {output_file}")
+        
+        # Create combined feature importance summary
+        if all_importance:
+            combined_summary = []
+            for position, df in all_importance.items():
+                top_features = df.head(5)[['feature', 'importance']].copy()
+                top_features['position'] = position.upper()
+                combined_summary.append(top_features)
+            
+            if combined_summary:
+                combined_df = pd.concat(combined_summary, ignore_index=True)
+                combined_df.to_csv("feature_importance_summary.csv", index=False)
+                print(f"\n  ✓ Saved combined feature importance summary to feature_importance_summary.csv")
+        
+        return all_importance
+    
     # IMPROVEMENT #2: Add 2025 Inference Method
     def infer_2025(self, data: Dict, position: str) -> pd.DataFrame:
         """Generate 2025 predictions for a position using trained model."""
@@ -1236,6 +1329,9 @@ class SimpleMLTrainer:
         
         self.print_performance_summary()
         self.save_validation_results()
+        
+        # NEW: Analyze feature importance after training
+        self.analyze_all_feature_importance()
         
         # Save debug logs from data loader
         self.data_loader.save_debug_logs("ml_training")
