@@ -210,10 +210,19 @@ class PositionalValueAnalyzer:
                 # Store player data
                 position_players = []
                 for _, row in pos_data.iterrows():
+                    # Apply league-specific scoring adjustment
+                    original_points = row['Points_Numeric']
+                    adjusted_points = self.adjust_points_for_league_scoring(
+                        original_points, 
+                        row['Player_Clean'], 
+                        position, 
+                        year
+                    )
+                    
                     player_data = {
                         'player': row['Player_Clean'],
                         'adp': row['ADP_Numeric'],
-                        'points': row['Points_Numeric'],
+                        'points': adjusted_points,  # Use league-adjusted points
                         'position_rank': row['Position_Rank'],
                         'adp_round': self._adp_to_round(row['ADP_Numeric'])
                     }
@@ -886,3 +895,110 @@ class PositionalValueAnalyzer:
             return 99
         round_num = int((adp - 1) // league_size) + 1
         return round_num if round_num <= 15 else 99  # Cap at 15 rounds
+    
+    def _get_player_raw_stats(self, player_name: str, position: str, year: int) -> Dict:
+        """
+        Get raw stats data for a player including TDs and explosive plays.
+        
+        Args:
+            player_name: Clean player name
+            position: Player position
+            year: Year of data
+            
+        Returns:
+            Dictionary with raw stats data
+        """
+        stats_data = {}
+        
+        # Try to get advanced metrics data (for explosive plays)
+        if hasattr(self.data_loader, 'advanced_data'):
+            pos_key = f"{position}_{year}"
+            if pos_key in self.data_loader.advanced_data:
+                adv_data = self.data_loader.advanced_data[pos_key]
+                player_adv = adv_data[adv_data['PLAYER'].str.contains(player_name, case=False, na=False)]
+                if not player_adv.empty:
+                    stats_data['40+ YDS'] = player_adv.iloc[0].get('40+ YDS', 0)
+        
+        # Try to get stats data (for TDs) - load stats file if needed
+        try:
+            import pandas as pd
+            import os
+            
+            # Construct stats file path
+            stats_file = os.path.join('fantasy_data', f'stats_{position.lower()}_{year}_half.csv')
+            if os.path.exists(stats_file):
+                stats_df = pd.read_csv(stats_file)
+                
+                # Handle multi-level headers - the player names are in the second column
+                player_col = None
+                if 'Unnamed: 1_level_0' in stats_df.columns:
+                    player_col = 'Unnamed: 1_level_0'
+                elif 'Player' in stats_df.columns:
+                    player_col = 'Player'
+                elif 'PLAYER' in stats_df.columns:
+                    player_col = 'PLAYER'
+                
+                if player_col:
+                    # Clean player name matching
+                    player_stats = stats_df[stats_df[player_col].astype(str).str.contains(player_name, case=False, na=False)]
+                    if not player_stats.empty:
+                        # For QBs, get passing TDs from PASSING.5 column (TD column)
+                        if position.lower() == 'qb':
+                            # QB passing TDs are in 'PASSING.5' based on the data structure
+                            if 'PASSING.5' in stats_df.columns:
+                                stats_data['TD'] = pd.to_numeric(player_stats.iloc[0]['PASSING.5'], errors='coerce') or 0
+                        else:
+                            # For skill positions, sum rushing and receiving TDs
+                            # RUSHING.2 is typically rushing TDs
+                            rushing_tds = 0
+                            if 'RUSHING.2' in stats_df.columns:
+                                rushing_tds = pd.to_numeric(player_stats.iloc[0]['RUSHING.2'], errors='coerce') or 0
+                            
+                            # For WRs/TEs, also look for receiving TDs (usually in different files)
+                            stats_data['TD'] = rushing_tds
+                            
+        except Exception as e:
+            print(f"Warning: Could not load stats data for {player_name}: {e}")
+            
+        return stats_data
+    
+    def adjust_points_for_league_scoring(self, original_points: float, player_name: str, position: str, year: int) -> float:
+        """
+        Adjust fantasy points from 4pt passing TDs to 6pt passing TDs and add explosive play bonuses.
+        
+        Args:
+            original_points: Original fantasy points (4pt passing TD system)
+            player_name: Player name for stats lookup
+            position: Player position
+            year: Year of data
+            
+        Returns:
+            Adjusted fantasy points for league scoring
+        """
+        adjusted_points = original_points
+        
+        # Get raw stats for this player
+        raw_stats = self._get_player_raw_stats(player_name, position, year)
+        
+        if position.lower() == 'qb':
+            # Adjust for 6pt passing TDs instead of 4pt
+            pass_tds = raw_stats.get('TD', 0)
+            td_adjustment = pass_tds * 2  # +2 points per passing TD
+            adjusted_points += td_adjustment
+            
+            # Add explosive play bonus for QBs (40+ yard passes that become TDs)
+            explosive_passes = raw_stats.get('40+ YDS', 0)
+            # Estimate that ~15% of 40+ yard passes are TDs
+            estimated_explosive_tds = explosive_passes * 0.15
+            explosive_bonus = estimated_explosive_tds * 2  # +2 points per explosive TD
+            adjusted_points += explosive_bonus
+            
+        else:
+            # For skill positions, add explosive play bonus (40+ yard TDs)
+            explosive_plays = raw_stats.get('40+ YDS', 0)
+            # Estimate that ~25% of 40+ yard plays are TDs
+            estimated_explosive_tds = explosive_plays * 0.25
+            explosive_bonus = estimated_explosive_tds * 2  # +2 points per explosive TD
+            adjusted_points += explosive_bonus
+            
+        return adjusted_points

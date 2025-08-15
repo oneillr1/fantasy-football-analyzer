@@ -334,6 +334,49 @@ class SimpleMLTrainer:
                 print(f"  ✓ Truncated features to {expected_dim} dimensions")
         return X_array
     
+    def adjust_fpts_for_league_scoring(self, fpts: float, stats: Dict, position: str) -> float:
+        """
+        Adjust FPTS from 4pt passing TDs to 6pt passing TDs and add explosive play bonuses.
+        
+        Args:
+            fpts: Original fantasy points (4pt passing TD system)
+            stats: Raw player statistics
+            position: Player position
+            
+        Returns:
+            Adjusted fantasy points for your league scoring
+        """
+        adjusted_fpts = fpts
+        
+        if position.lower() == 'qb':
+            # Adjust for 6pt passing TDs instead of 4pt
+            pass_tds = self.safe_float_conversion(stats.get('TD', 0))
+            td_adjustment = pass_tds * 2  # +2 points per passing TD
+            adjusted_fpts += td_adjustment
+            
+            # Add bonus for 40+ yard passing TDs (estimated from explosive plays)
+            # Approximate: assume 15% of 40+ yard passes are TDs for QBs
+            forty_plus_passes = self.safe_float_conversion(stats.get('40+ YDS', 0))
+            if forty_plus_passes == 0:
+                # Try alternative column names
+                forty_plus_passes = self.safe_float_conversion(stats.get('40+', 0))
+            estimated_long_pass_tds = forty_plus_passes * 0.15
+            explosive_bonus = estimated_long_pass_tds * 2  # +2 points per long TD
+            adjusted_fpts += explosive_bonus
+            
+        else:  # RB, WR, TE
+            # Add bonus for 40+ yard rushing/receiving TDs
+            # Approximate: assume 25% of 40+ yard plays are TDs for skill positions
+            forty_plus_plays = self.safe_float_conversion(stats.get('40+ YDS', 0))
+            if forty_plus_plays == 0:
+                # Try alternative column names
+                forty_plus_plays = self.safe_float_conversion(stats.get('40+', 0))
+            estimated_long_tds = forty_plus_plays * 0.25
+            explosive_bonus = estimated_long_tds * 2  # +2 points per long TD
+            adjusted_fpts += explosive_bonus
+        
+        return adjusted_fpts
+    
     def load_stats_file(self, file_path: str, position: str, year: int) -> pd.DataFrame:
         """
         Load and process a stats file with complex multi-level column headers.
@@ -454,8 +497,9 @@ class SimpleMLTrainer:
         # Basic stats features
         stats = player_data.get('stats', {})
         if stats:
-            # Fantasy PPG (most important feature)
-            fpts = self.safe_float_conversion(stats.get('FPTS', stats.get('TTL', 0)))
+            # Fantasy PPG (most important feature) - now with league-specific scoring
+            fpts_raw = self.safe_float_conversion(stats.get('FPTS', stats.get('TTL', 0)))
+            fpts = self.adjust_fpts_for_league_scoring(fpts_raw, stats, position)
             games = self.safe_float_conversion(stats.get('G', 1))
             
             if games <= 0:
@@ -898,8 +942,21 @@ class SimpleMLTrainer:
                 # Extract features using schema-based approach
                 features = self.extract_features_safe(player_data, position, year, player_name)
                 
-                # Get target (next year's PPG)
-                next_fpts = self.safe_float_conversion(next_player.get('AVG', next_player.get('FPTS/G', 0)))
+                # Get target (next year's PPG) - adjust for league-specific scoring
+                next_fpts_raw = self.safe_float_conversion(next_player.get('AVG', next_player.get('FPTS/G', 0)))
+                # Apply league scoring adjustment to targets too for consistency
+                if hasattr(next_player, 'to_dict'):
+                    next_player_dict = next_player.to_dict()
+                    next_fpts = self.adjust_fpts_for_league_scoring(next_fpts_raw, next_player_dict, position)
+                else:
+                    # If we don't have raw stats, apply a simple QB adjustment based on position
+                    if position.lower() == 'qb':
+                        # Estimate TD adjustment: assume ~25 pass TDs per season for average QB
+                        estimated_pass_tds = 25
+                        td_adjustment = estimated_pass_tds * 2 / 16  # Convert to per-game adjustment
+                        next_fpts = next_fpts_raw + td_adjustment
+                    else:
+                        next_fpts = next_fpts_raw
                 
                 if len(features) > 0 and next_fpts > 0:
                     X.append(features)

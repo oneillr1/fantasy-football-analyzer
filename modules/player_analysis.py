@@ -544,3 +544,107 @@ class PlayerAnalyzer:
             profile['similar_players'] = similar_players
         
         return profile 
+
+    def _get_player_raw_stats(self, player_name: str, position: str, year: int) -> Dict:
+        """
+        Get raw stats data for a player including TDs and explosive plays.
+        
+        Args:
+            player_name: Clean player name
+            position: Player position
+            year: Year of data
+            
+        Returns:
+            Dictionary with raw stats data
+        """
+        stats_data = {}
+        
+        # Try to get advanced metrics data (for explosive plays)
+        if position in self.data_loader.advanced_data and year in self.data_loader.advanced_data[position]:
+            adv_df = self.data_loader.advanced_data[position][year]
+            for _, row in adv_df.iterrows():
+                adv_player = self.data_loader.clean_player_name(row.get('Player', ''))
+                if adv_player == player_name:
+                    stats_data['explosive_plays'] = self.data_loader.safe_float_conversion(row.get('40+ YDS', 0))
+                    break
+        
+        # Try to load stats files for TD data (similar to simple ML trainer)
+        stats_file_path = self.data_loader.data_dir / f"stats_{position.lower()}_{year}_half.csv"
+        if stats_file_path.exists():
+            try:
+                # Read the stats file
+                with open(stats_file_path, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                
+                if len(lines) >= 3:
+                    # Parse headers (second line)
+                    headers = [col.strip() for col in lines[1].split(',')]
+                    
+                    # Find player data
+                    for line in lines[2:]:
+                        if line.strip():
+                            values = [val.strip() for val in line.split(',')]
+                            if len(values) >= len(headers):
+                                row_dict = dict(zip(headers, values))
+                                file_player = self.data_loader.clean_player_name(row_dict.get('Player', ''))
+                                if file_player == player_name:
+                                    # Extract TD data based on position
+                                    if position.lower() == 'qb':
+                                        stats_data['pass_tds'] = self.data_loader.safe_float_conversion(row_dict.get('TD', 0))
+                                        # For QBs, there might be rushing TDs in a second TD column
+                                        # Look for the rushing TD column (usually the second TD column)
+                                        td_indices = [i for i, h in enumerate(headers) if h == 'TD']
+                                        if len(td_indices) > 1 and len(values) > td_indices[1]:
+                                            stats_data['rush_tds'] = self.data_loader.safe_float_conversion(values[td_indices[1]])
+                                    else:
+                                        # For RB/WR/TE, get rushing and receiving TDs
+                                        stats_data['total_tds'] = self.data_loader.safe_float_conversion(row_dict.get('TD', 0))
+                                    break
+            except Exception as e:
+                print(f"    Warning: Could not load stats for {player_name}: {e}")
+        
+        return stats_data
+    
+    def adjust_points_for_league_scoring(self, points: float, player_name: str, position: str, year: int) -> float:
+        """
+        Adjust fantasy points for league-specific scoring using real player data.
+        
+        Args:
+            points: Original fantasy points (4pt passing TD system)
+            player_name: Clean player name
+            position: Player position
+            year: Year of data
+            
+        Returns:
+            Adjusted fantasy points for your league scoring
+        """
+        adjusted_points = points
+        
+        # Get raw stats for this player
+        raw_stats = self._get_player_raw_stats(player_name, position, year)
+        
+        if position.upper() == 'QB':
+            # Adjust for 6pt passing TDs instead of 4pt
+            pass_tds = raw_stats.get('pass_tds', 0)
+            if pass_tds > 0:
+                td_adjustment = pass_tds * 2  # +2 points per passing TD
+                adjusted_points += td_adjustment
+            
+            # Add bonus for 40+ yard passing TDs (estimated from explosive plays)
+            explosive_plays = raw_stats.get('explosive_plays', 0)
+            if explosive_plays > 0:
+                # Estimate 15% of 40+ yard passes are TDs
+                estimated_long_pass_tds = explosive_plays * 0.15
+                explosive_bonus = estimated_long_pass_tds * 2  # +2 points per long TD
+                adjusted_points += explosive_bonus
+        
+        else:  # RB, WR, TE
+            # Add bonus for 40+ yard rushing/receiving TDs
+            explosive_plays = raw_stats.get('explosive_plays', 0)
+            if explosive_plays > 0:
+                # Estimate 25% of 40+ yard plays are TDs for skill positions
+                estimated_long_tds = explosive_plays * 0.25
+                explosive_bonus = estimated_long_tds * 2  # +2 points per long TD
+                adjusted_points += explosive_bonus
+        
+        return adjusted_points 
